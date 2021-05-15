@@ -16,7 +16,7 @@ br.log
 
 #also, these img files are created during the build process:
 rockdev/oem.img
-rockdev/update.mg
+rockdev/update.img
 
 #and this whole repo:
 .rootfs/*
