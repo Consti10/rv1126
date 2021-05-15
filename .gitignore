@@ -11,3 +11,9 @@ IMAGE/*
 #also do not track this hughe file :)
 kernel/kernel.git.rar
 
+# do not track the log (it increases with every build run)
+br.log
+
+#also, these img files are created during the build process:
+rockdev/oem.img
+rockdev/update.mg
