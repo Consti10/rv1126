@@ -2,5 +2,10 @@
 #do not track the rknn crap files
 external/rknn-toolkit/packages/*.whl
 
+#do not track this crap neither:
+external/rockx/python/*.whl
+
 #do not track the generated images:
 IMAGE/*
+
+
