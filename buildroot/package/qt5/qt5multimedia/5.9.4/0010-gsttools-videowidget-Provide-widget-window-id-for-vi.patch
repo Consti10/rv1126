@@ -1,0 +1,73 @@
+From 74986ad8eab4894a878fd90cab986a52221490ef Mon Sep 17 00:00:00 2001
+From: Jeffy Chen <jeffy.chen@rock-chips.com>
+Date: Mon, 24 Dec 2018 15:40:56 +0800
+Subject: [PATCH 10/13] gsttools: videowidget: Provide widget window id for
+ video window
+
+Signed-off-by: Jeffy Chen <jeffy.chen@rock-chips.com>
+---
+ src/gsttools/qgstreamervideowidget.cpp | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/gsttools/qgstreamervideowidget.cpp b/src/gsttools/qgstreamervideowidget.cpp
+index 2e85973..8029716 100644
+--- a/src/gsttools/qgstreamervideowidget.cpp
++++ b/src/gsttools/qgstreamervideowidget.cpp
+@@ -43,10 +43,11 @@
+ #include <QtCore/qdebug.h>
+ #include <QtGui/qevent.h>
+ #include <QtGui/qpainter.h>
++#include <QtGui/qwindow.h>
+ 
+ QT_BEGIN_NAMESPACE
+ 
+-class QGstreamerVideoWidget : public QWidget
++class QGstreamerVideoWidget : public QWidget, public QVideoWindowAbstractInterface
+ {
+ public:
+     QGstreamerVideoWidget(QGstreamerVideoOverlay *overlay, QWidget *parent = 0)
+@@ -85,6 +86,12 @@ public:
+         painter.fillRect(rect(), palette().background());
+     }
+ 
++    WId videoWinId() const Q_DECL_OVERRIDE {
++        QWidget *parent = parentWidget();
++
++        return parent ? parent->winId() : winId();
++    }
++
+ protected:
+     void paintEvent(QPaintEvent *) override
+     {
+@@ -135,7 +142,7 @@ void QGstreamerVideoWidgetControl::createVideoWidget()
+     m_widget = new QGstreamerVideoWidget(&m_videoOverlay);
+ 
+     m_widget->installEventFilter(this);
+-    m_videoOverlay.setWindowHandle(m_windowId = m_widget->winId());
++    m_videoOverlay.setWindowHandle(m_windowId = m_widget->videoWinId());
+ }
+ 
+ GstElement *QGstreamerVideoWidgetControl::videoSink()
+@@ -145,6 +152,10 @@ GstElement *QGstreamerVideoWidgetControl::videoSink()
+ 
+ void QGstreamerVideoWidgetControl::onOverlayActiveChanged()
+ {
++    WId newWId = m_widget->videoWinId();
++    if (newWId != m_windowId)
++        m_videoOverlay.setWindowHandle(m_windowId = newWId);
++
+     updateWidgetAttributes();
+ }
+ 
+@@ -170,7 +181,7 @@ bool QGstreamerVideoWidgetControl::eventFilter(QObject *object, QEvent *e)
+ {
+     if (m_widget && object == m_widget) {
+         if (e->type() == QEvent::ParentChange || e->type() == QEvent::Show || e->type() == QEvent::WinIdChange) {
+-            WId newWId = m_widget->winId();
++            WId newWId = m_widget->winId() ? m_widget->videoWinId() : 0;
+             if (newWId != m_windowId)
+                 m_videoOverlay.setWindowHandle(m_windowId = newWId);
+         }
+-- 
+2.20.1
+

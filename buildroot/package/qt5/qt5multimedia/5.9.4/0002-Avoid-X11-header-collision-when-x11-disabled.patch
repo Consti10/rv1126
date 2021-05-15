@@ -1,0 +1,29 @@
+From 4700c4389b0d5c4726a5b532d1458d2c26ac41c8 Mon Sep 17 00:00:00 2001
+From: Binyuan Lan <lby@rock-chips.com>
+Date: Mon, 28 Aug 2017 11:42:53 +0800
+Subject: [PATCH 02/13] Avoid X11 header collision when x11 disabled
+
+Signed-off-by: Binyuan Lan <lby@rock-chips.com>
+---
+ src/plugins/videonode/egl/egl.pro | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/plugins/videonode/egl/egl.pro b/src/plugins/videonode/egl/egl.pro
+index 7151123..756d295 100644
+--- a/src/plugins/videonode/egl/egl.pro
++++ b/src/plugins/videonode/egl/egl.pro
+@@ -3,6 +3,11 @@ TARGET = eglvideonode
+ QT += multimedia-private qtmultimediaquicktools-private
+ CONFIG += egl
+ 
++!contains(QT_CONFIG,xcb) {
++ # Avoid X11 header collision
++ DEFINES += MESA_EGL_NO_X11_HEADERS
++}
++
+ HEADERS += \
+     qsgvideonode_egl.h
+ 
+-- 
+2.20.1
+

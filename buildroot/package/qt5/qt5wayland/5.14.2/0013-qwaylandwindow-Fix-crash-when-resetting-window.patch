@@ -1,0 +1,28 @@
+From bc7b8a59a08e3664c5b0a8e68ad5b5fed2bc5bfc Mon Sep 17 00:00:00 2001
+From: Jeffy Chen <jeffy.chen@rock-chips.com>
+Date: Thu, 15 Oct 2020 09:50:39 +0800
+Subject: [PATCH 13/13] qwaylandwindow: Fix crash when resetting window
+
+We must destroy egl surface before destroy related wl surface.
+
+Signed-off-by: Jeffy Chen <jeffy.chen@rock-chips.com>
+---
+ src/client/qwaylandwindow.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/client/qwaylandwindow.cpp b/src/client/qwaylandwindow.cpp
+index de88ea9..9d7b4b4 100644
+--- a/src/client/qwaylandwindow.cpp
++++ b/src/client/qwaylandwindow.cpp
+@@ -249,6 +249,8 @@ void QWaylandWindow::reset(bool sendDestroyEvent)
+     delete mSubSurfaceWindow;
+     mSubSurfaceWindow = nullptr;
+     if (mSurface) {
++        invalidateSurface();
++
+         emit wlSurfaceDestroyed();
+         QWriteLocker lock(&mSurfaceLock);
+         mSurface.reset();
+-- 
+2.20.1
+

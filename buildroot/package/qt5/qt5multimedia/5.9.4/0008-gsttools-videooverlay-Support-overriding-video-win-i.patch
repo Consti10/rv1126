@@ -1,0 +1,42 @@
+From 502bdfe98c3d56c8ad28e4fba50a665dff29021e Mon Sep 17 00:00:00 2001
+From: Jeffy Chen <jeffy.chen@rock-chips.com>
+Date: Fri, 30 Nov 2018 17:54:38 +0800
+Subject: [PATCH 08/13] gsttools: videooverlay: Support overriding video win id
+
+Signed-off-by: Jeffy Chen <jeffy.chen@rock-chips.com>
+---
+ src/gsttools/qgstreamervideooverlay.cpp | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/src/gsttools/qgstreamervideooverlay.cpp b/src/gsttools/qgstreamervideooverlay.cpp
+index 75ae07b..406a0bd 100644
+--- a/src/gsttools/qgstreamervideooverlay.cpp
++++ b/src/gsttools/qgstreamervideooverlay.cpp
+@@ -210,6 +210,15 @@ static QWindow *findWindow(WId id) {
+     return NULL;
+ }
+ 
++static QWindow *getVideoWindow(WId id) {
++    QWindow *window = findWindow(id);
++
++    QVideoWindowAbstractInterface *intf =
++        dynamic_cast<QVideoWindowAbstractInterface *>(window);
++
++    return intf ? findWindow(intf->videoWinId()) : window;
++}
++
+ void QGstreamerVideoOverlay::setWindowHandle_helper(WId id)
+ {
+ #ifdef ENABLE_WAYLAND_PLATFORM
+@@ -235,7 +244,7 @@ void QGstreamerVideoOverlay::setWindowHandle_helper(WId id)
+ 
+     overlay = GST_VIDEO_OVERLAY(m_videoSink);
+ 
+-    window = findWindow(id);
++    window = getVideoWindow(id);
+     if (!window)
+         goto no_window;
+ 
+-- 
+2.20.1
+

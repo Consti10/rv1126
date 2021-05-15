@@ -1,0 +1,51 @@
+From 02b6ccecdb5fabfdf8017faf40a245d851ed7051 Mon Sep 17 00:00:00 2001
+From: Ziyuan Xu <xzy.xu@rock-chips.com>
+Date: Thu, 25 Jul 2019 10:18:43 +0000
+Subject: [PATCH 10/17] Client: adds nullptr checks whenever we use the
+ fromWlSurface()
+
+This is similar to commit a9cf60881eeb("Client: Add safer fromObject
+unction to scanner").
+
+Signed-off-by: Ziyuan Xu <xzy.xu@rock-chips.com>
+---
+ src/client/qwaylandinputdevice.cpp | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/src/client/qwaylandinputdevice.cpp b/src/client/qwaylandinputdevice.cpp
+index 0353c3f..a84a10b 100644
+--- a/src/client/qwaylandinputdevice.cpp
++++ b/src/client/qwaylandinputdevice.cpp
+@@ -662,8 +662,10 @@ void QWaylandInputDevice::Keyboard::keyboard_enter(uint32_t time, struct wl_surf
+     if (!surface)
+         return;
+ 
++    auto *window = QWaylandWindow::fromWlSurface(surface);
++    if (!window)
++        return; // Ignore foreign surfaces
+ 
+-    QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
+     mFocus = window;
+ 
+     mParent->mQDisplay->handleKeyboardFocusChanged(mParent);
+@@ -674,10 +676,13 @@ void QWaylandInputDevice::Keyboard::keyboard_leave(uint32_t time, struct wl_surf
+     Q_UNUSED(time);
+     Q_UNUSED(surface);
+ 
+-    if (surface) {
+-        QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
+-        window->unfocus();
+-    }
++    if (!surface)
++        return;
++
++    auto *window = QWaylandWindow::fromWlSurface(surface);
++    if (!window)
++        return; // Ignore foreign surfaces
++    window->unfocus();
+ 
+     mFocus = NULL;
+ 
+-- 
+2.20.1
+

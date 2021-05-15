@@ -1,0 +1,49 @@
+From 2fdca158a8ca9ec145ae9ac137914bbbaa556f9a Mon Sep 17 00:00:00 2001
+From: Binyuan Lan <lby@rock-chips.com>
+Date: Wed, 19 Jul 2017 17:59:44 +0800
+Subject: [PATCH 01/13] qt5multimedia: qmlvideo support assigned videosink
+
+Signed-off-by: Binyuan Lan <lby@rock-chips.com>
+---
+ .../qdeclarativevideooutput.cpp                       |  2 +-
+ .../qdeclarativevideooutput_window.cpp                | 11 ++++++++---
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/src/qtmultimediaquicktools/qdeclarativevideooutput.cpp b/src/qtmultimediaquicktools/qdeclarativevideooutput.cpp
+index 4fc7684..4133452 100644
+--- a/src/qtmultimediaquicktools/qdeclarativevideooutput.cpp
++++ b/src/qtmultimediaquicktools/qdeclarativevideooutput.cpp
+@@ -248,7 +248,7 @@ bool QDeclarativeVideoOutput::createBackend(QMediaService *service)
+         }
+     }
+ 
+-    if (!backendAvailable) {
++    if (!backendAvailable && qgetenv( "QT_GSTREAMER_WINDOW_VIDEOSINK" ).isEmpty()) {
+         m_backend.reset(new QDeclarativeVideoRendererBackend(this));
+         if (m_backend->init(service))
+             backendAvailable = true;
+diff --git a/src/qtmultimediaquicktools/qdeclarativevideooutput_window.cpp b/src/qtmultimediaquicktools/qdeclarativevideooutput_window.cpp
+index bae29e1..f24fcaa 100644
+--- a/src/qtmultimediaquicktools/qdeclarativevideooutput_window.cpp
++++ b/src/qtmultimediaquicktools/qdeclarativevideooutput_window.cpp
+@@ -84,9 +84,14 @@ void QDeclarativeVideoWindowBackend::itemChange(QQuickItem::ItemChange change,
+         updateGeometry();
+         break;
+     case QQuickItem::ItemSceneChange:
+-        if (changeData.window)
+-            m_videoWindowControl->setWinId(changeData.window->winId());
+-        else
++        if (changeData.window) {
++			if(qgetenv( "QT_EGLFSPLATFORM_USE_GST_VIDEOSINK" ).isEmpty())
++				m_videoWindowControl->setWinId(changeData.window->winId());
++			else {
++				printf("QT_EGLFSPLATFORM_USE_GST_VIDEOSINK--and---setWinId(1)\n");
++				m_videoWindowControl->setWinId(1);
++			}
++        } else
+             m_videoWindowControl->setWinId(0);
+         break;
+     default: break;
+-- 
+2.20.1
+
