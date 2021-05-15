@@ -1,0 +1,6 @@
+#Consti:
+#do not track the rknn crap files
+external/rknn-toolkit/packages/*.whl
+
+#do not track the generated images:
+IMAGE/*
