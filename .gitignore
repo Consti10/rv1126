@@ -20,3 +20,7 @@ rockdev/update.img
 
 #and this whole repo:
 .rootfs/*
+
+
+#I use CLion ad ide, but do not add that stuff in github
+.idea/*
