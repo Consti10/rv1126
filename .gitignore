@@ -8,4 +8,6 @@ external/rockx/python/*.whl
 #do not track the generated images:
 IMAGE/*
 
+#also do not track this hughe file :)
+kernel/kernel.git.rar
 
