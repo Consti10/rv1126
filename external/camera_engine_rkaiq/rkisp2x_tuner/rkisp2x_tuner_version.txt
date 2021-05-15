@@ -1,0 +1,33 @@
+Current Version: v1.3.0
+
+==================== RKISP2X TUNER VERSION HISTORY ====================
+v0.1.0 - 2020.07.15
+  - first version
+  - new function
+        - calibration tooll: BLC, LSC, CCM, AWB, BNR, YNR, Simulator
+        - capture tool : raw capture(AUTO/MANUAL/MULTI-FRAME)
+ 
+v0.2.0 - 2020.09.11
+  - update AIQ to v1.2.0
+  - new function
+        - tuner(online): AEC, BNR, MFNR, UVNR, YNR, SHARP
+
+v0.2.1 - 2020.09.19
+  - update AIQ to v1.2.1
+  - fix some bugs
+
+v0.3.0 - 2020.10.19
+  - update AIQ to v1.3.0
+  - new function
+        - tuner(online): Edge Filter, Dehaze, Gamma, DPCC, AHDR
+        - calibration tool: FEC/LDCH
+        - tuning assistant: first version
+  - fix some bugs
+        
+v1.3.0 - 2020.11.02
+  - update AIQ to v1.0x23.0
+  - gamma support zoom in/out, mouse drag
+  - ccm support normal/hdr
+  - adapt to dpcc/dehaze/hdr AIQ changes
+
+==================== RKISP2X TUNER VERSION HISTORY ====================
