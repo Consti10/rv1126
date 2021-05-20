@@ -120,6 +120,8 @@ CamSource *camera_source_init(const char *device, RK_U32 bufcnt, RK_U32 width, R
     RK_U32 buf_len = 0;
     CamSource *ctx;
 
+    mpp_err_f("Hello from Consti<camera_source_init>\n");
+
     ctx = mpp_calloc(CamSource, 1);
     if (!ctx)
         return NULL;

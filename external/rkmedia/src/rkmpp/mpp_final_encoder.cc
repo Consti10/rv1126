@@ -169,6 +169,9 @@ public:
 };
 
 bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
+
+    LOG("Consti10:MPPMJPEGConfig::InitConfig\n");
+
   // for jpeg/mjpeg common.
   ImageConfig img_cfg;
   ImageInfo img_info;

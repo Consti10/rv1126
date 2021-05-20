@@ -208,13 +208,15 @@ int main(int argc, char *argv[]) {
 #endif
   parse_args(argc, argv);
   setenv("RKMEDIA_LOG_METHOD", "MINILOG", 0);
-  setenv("RKMEDIA_LOG_LEVEL", "INFO", 0);
+  //COnsti10setenv("RKMEDIA_LOG_LEVEL", "INFO", 0);
+    setenv("RKMEDIA_LOG_LEVEL", "DEBUG", 0);
   LOG_INIT();
   __minilog_log_init(argv[0], NULL, false, enable_minilog_backtrace, argv[0],
                      "1.0.0");
 
   fprintf(stderr, "mediaserver[%d]: start config: %s\n", __LINE__,
           (char *)media_config.c_str());
+  fprintf(stderr,"Hello from Consti\n");
   signal(SIGQUIT, sigterm_handler);
   signal(SIGINT, sigterm_handler);
   signal(SIGTERM, sigterm_handler);
@@ -296,9 +298,9 @@ static void parse_args(int argc, char **argv) {
 
   get_env("enable_minilog_backtrace", &enable_minilog_backtrace, 0);
   get_env("enable_encoder_debug", &enable_encoder_debug, 0);
-  get_env("mediaserver_log_level", &mediaserver_log_level, LOG_LEVEL_INFO);
+  get_env("mediaserver_log_level", &mediaserver_log_level, LOG_LEVEL_DEBUG);
   LOG_INFO("mediaserver_log_level is %d\n", mediaserver_log_level);
-
+  LOG_INFO("Hello from Consti2\n");
   for (;;) {
     int idx;
     int c;
