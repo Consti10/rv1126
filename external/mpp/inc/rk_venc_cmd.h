@@ -150,6 +150,20 @@
  */
 
 /*
+ * base working mode parameter
+ */
+typedef enum MppEncBaseCfgChange_e {
+    MPP_ENC_BASE_CFG_CHANGE_LOW_DELAY   = (1 << 0),
+    MPP_ENC_BASE_CFG_CHANGE_ALL         = (0xFFFFFFFF),
+} MppEncBaseCfgChange;
+
+typedef struct MppEncBaseCfg_t {
+    RK_U32  change;
+
+    RK_S32  low_delay;
+} MppEncBaseCfg;
+
+/*
  * Rate control parameter
  */
 typedef enum MppEncRcCfgChange_e {
@@ -165,6 +179,18 @@ typedef enum MppEncRcCfgChange_e {
     MPP_ENC_RC_CFG_CHANGE_MAX_I_PROP    = (1 << 11),
     MPP_ENC_RC_CFG_CHANGE_MIN_I_PROP    = (1 << 12),
     MPP_ENC_RC_CFG_CHANGE_INIT_IP_RATIO = (1 << 13),
+    MPP_ENC_RC_CFG_CHANGE_PRIORITY      = (1 << 14),
+    MPP_ENC_RC_CFG_CHANGE_SUPER_FRM     = (1 << 15),
+    /* qp related change flag */
+    MPP_ENC_RC_CFG_CHANGE_QP_INIT       = (1 << 16),
+    MPP_ENC_RC_CFG_CHANGE_QP_RANGE      = (1 << 17),
+    MPP_ENC_RC_CFG_CHANGE_QP_RANGE_I    = (1 << 18),
+    MPP_ENC_RC_CFG_CHANGE_QP_MAX_STEP   = (1 << 19),
+    MPP_ENC_RC_CFG_CHANGE_QP_IP         = (1 << 20),
+    MPP_ENC_RC_CFG_CHANGE_QP_VI         = (1 << 21),
+    MPP_ENC_RC_CFG_CHANGE_QP_ROW        = (1 << 22),
+    MPP_ENC_RC_CFG_CHANGE_QP_ROW_I      = (1 << 23),
+    MPP_ENC_RC_CFG_CHANGE_DEBREATH      = (1 << 26),
     MPP_ENC_RC_CFG_CHANGE_ALL           = (0xFFFFFFFF),
 } MppEncRcCfgChange;
 
@@ -272,14 +298,14 @@ typedef struct MppEncRcCfg_t {
      * skip_cnt - max continuous frame skip count
      * 0 - frame skip is not allow
      */
-    RK_S16  skip_cnt;
+    RK_S32  skip_cnt;
 
     /*
      * max_reenc_times - max reencode time for one frame
      * 0 - reencode is not allowed
      * 1~3 max reencode time is limited to 3
      */
-    RK_U16  max_reenc_times;
+    RK_U32  max_reenc_times;
 
     /*
      * stat_times   - the time of bitrate statistics
@@ -306,14 +332,62 @@ typedef struct MppEncRcCfg_t {
      * drop_gap
      * The max continuous frame drop number
      */
-    MppEncRcDropFrmMode drop_mode;
-    RK_U32  drop_threshold;
-    RK_U32  drop_gap;
+    MppEncRcDropFrmMode     drop_mode;
+    RK_U32                  drop_threshold;
+    RK_U32                  drop_gap;
 
-    RK_S32  max_i_prop;
-    RK_S32  min_i_prop;
-    RK_S32  init_ip_ratio;
+    MppEncRcSuperFrameMode  super_mode;
+    RK_U32                  super_i_thd;
+    RK_U32                  super_p_thd;
+
+    MppEncRcPriority        rc_priority;
+
+    RK_U32                  debreath_en;
+    RK_U32                  debre_strength;
+    RK_S32                  max_i_prop;
+    RK_S32                  min_i_prop;
+    RK_S32                  init_ip_ratio;
+
+    /* general qp control */
+    RK_S32                  qp_init;
+    RK_S32                  qp_max;
+    RK_S32                  qp_max_i;
+    RK_S32                  qp_min;
+    RK_S32                  qp_min_i;
+    RK_S32                  qp_max_step;                /* delta qp between each two P frame */
+    RK_S32                  qp_delta_ip;                /* delta qp between I and P */
+    RK_S32                  qp_delta_vi;                /* delta qp between vi and P */
 } MppEncRcCfg;
+
+
+typedef enum MppEncHwCfgChange_e {
+    /* qp related hardware config flag */
+    MPP_ENC_HW_CFG_CHANGE_QP_ROW        = (1 << 0),
+    MPP_ENC_HW_CFG_CHANGE_QP_ROW_I      = (1 << 1),
+    MPP_ENC_HW_CFG_CHANGE_AQ_THRD_I     = (1 << 2),
+    MPP_ENC_HW_CFG_CHANGE_AQ_THRD_P     = (1 << 3),
+    MPP_ENC_HW_CFG_CHANGE_AQ_STEP_I     = (1 << 4),
+    MPP_ENC_HW_CFG_CHANGE_AQ_STEP_P     = (1 << 5),
+    MPP_ENC_HW_CFG_CHANGE_ALL           = (0xFFFFFFFF),
+} MppEncHwCfgChange;
+
+/*
+ * Hardware related rate control config
+ *
+ * This config will open some detail feature to external user to control
+ * hardware behavior directly.
+ */
+typedef struct MppEncHwCfg_t {
+    RK_U32                  change;
+
+    /* vepu541/vepu540 */
+    RK_S32                  qp_delta_row;               /* delta qp between two row in P frame */
+    RK_S32                  qp_delta_row_i;             /* delta qp between two row in I frame */
+    RK_U32                  aq_thrd_i[16];
+    RK_U32                  aq_thrd_p[16];
+    RK_S32                  aq_step_i[16];
+    RK_S32                  aq_step_p[16];
+} MppEncHwCfg;
 
 /*
  * Mpp preprocess parameter
@@ -485,19 +559,27 @@ typedef enum MppEncH264CfgChange_e {
     MPP_ENC_H264_CFG_CHANGE_MAX_POC_LSB     = (1 << 11),
     /* change on log2 max frame number minus 4 */
     MPP_ENC_H264_CFG_CHANGE_MAX_FRM_NUM     = (1 << 12),
+    /* change on gaps_in_frame_num_value_allowed_flag */
+    MPP_ENC_H264_CFG_CHANGE_GAPS_IN_FRM_NUM = (1 << 13),
 
-    /* change on max_qp / min_qp / max_qp_step */
+    /* change on max_qp / min_qp */
     MPP_ENC_H264_CFG_CHANGE_QP_LIMIT        = (1 << 16),
+    /* change on max_qp_i / min_qp_i */
+    MPP_ENC_H264_CFG_CHANGE_QP_LIMIT_I      = (1 << 17),
+    /* change on max_qp_step */
+    MPP_ENC_H264_CFG_CHANGE_MAX_QP_STEP     = (1 << 18),
+    /* change on qp_delta_ip */
+    MPP_ENC_H264_CFG_CHANGE_QP_DELTA        = (1 << 19),
     /* change on intra_refresh_mode / intra_refresh_arg */
-    MPP_ENC_H264_CFG_CHANGE_INTRA_REFRESH   = (1 << 17),
+    MPP_ENC_H264_CFG_CHANGE_INTRA_REFRESH   = (1 << 20),
     /* change on max long-term reference frame count */
-    MPP_ENC_H264_CFG_CHANGE_MAX_LTR         = (1 << 18),
+    MPP_ENC_H264_CFG_CHANGE_MAX_LTR         = (1 << 21),
     /* change on max temporal id */
-    MPP_ENC_H264_CFG_CHANGE_MAX_TID         = (1 << 19),
+    MPP_ENC_H264_CFG_CHANGE_MAX_TID         = (1 << 22),
     /* change on adding prefix nal */
-    MPP_ENC_H264_CFG_CHANGE_ADD_PREFIX      = (1 << 20),
+    MPP_ENC_H264_CFG_CHANGE_ADD_PREFIX      = (1 << 23),
     /* change on base layer priority id */
-    MPP_ENC_H264_CFG_CHANGE_BASE_LAYER_PID  = (1 << 21),
+    MPP_ENC_H264_CFG_CHANGE_BASE_LAYER_PID  = (1 << 24),
 
     /* change on vui */
     MPP_ENC_H264_CFG_CHANGE_VUI             = (1 << 28),
@@ -527,6 +609,7 @@ typedef struct MppEncH264Cfg_t {
     RK_U8               poc_type;
     RK_U8               log2_max_poc_lsb;
     RK_U8               log2_max_frame_num;
+    RK_U32              gaps_not_allowed;
 
     /*
      * H.264 profile_idc parameter
@@ -747,6 +830,9 @@ typedef enum MppEncH265CfgChange_e {
     MPP_ENC_H265_CFG_ENTROPY_CHANGE             = (1 << 16),
     MPP_ENC_H265_CFG_MERGE_CHANGE               = (1 << 17),
     MPP_ENC_H265_CFG_CHANGE_VUI                 = (1 << 18),
+    MPP_ENC_H265_CFG_RC_I_QP_CHANGE             = (1 << 19),
+    MPP_ENC_H265_CFG_RC_MAX_QP_STEP_CHANGE      = (1 << 21),
+    MPP_ENC_H265_CFG_RC_IP_DELTA_QP_CHANGE      = (1 << 20),
     MPP_ENC_H265_CFG_CHANGE_ALL                 = (0xFFFFFFFF),
 } MppEncH265CfgChange;
 
@@ -1096,9 +1182,36 @@ typedef struct MppEncOSDData_t {
     MppEncOSDRegion     region[8];
 } MppEncOSDData;
 
+typedef struct MppEncOSDRegion2_t {
+    RK_U32              enable;
+    RK_U32              inverse;
+    RK_U32              start_mb_x;
+    RK_U32              start_mb_y;
+    RK_U32              num_mb_x;
+    RK_U32              num_mb_y;
+    RK_U32              buf_offset;
+    MppBuffer           buf;
+} MppEncOSDRegion2;
+
+typedef struct MppEncOSDData2_t {
+    RK_U32              num_region;
+    MppEncOSDRegion2    region[8];
+} MppEncOSDData2;
+
 typedef struct MppEncUserData_t {
-    RK_U32 len;
-    void   *pdata;
+    RK_U32              len;
+    void                *pdata;
 } MppEncUserData;
+
+typedef struct MppEncUserDataFull_t {
+    RK_U32              len;
+    RK_U8               *uuid;
+    void                *pdata;
+} MppEncUserDataFull;
+
+typedef struct MppEncUserDataSet_t {
+    RK_U32              count;
+    MppEncUserDataFull  *datas;
+} MppEncUserDataSet;
 
 #endif /*__RK_VENC_CMD_H__*/

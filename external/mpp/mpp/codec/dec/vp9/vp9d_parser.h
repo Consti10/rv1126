@@ -89,6 +89,7 @@ typedef struct RefInfo {
     RK_S32 ref_count;
     RK_U32 invisible;
     RK_U32 segMapIndex;
+    RK_U32 is_output;
 } RefInfo;
 
 typedef struct VP9Frame {
@@ -188,10 +189,16 @@ typedef struct VP9Context {
     } prob_ctx[4];
     struct {
         prob_context p;
-        RK_U8 coef[4][2][2][6][6][11];
+        RK_U8 coef[4][2][2][6][6][3];
         RK_U8 seg[7];
         RK_U8 segpred[3];
     } prob;
+    struct {
+        prob_context p_flag;
+        prob_context p_delta;
+        RK_U8 coef_flag[4][2][2][6][6][3];
+        RK_U8 coef_delta[4][2][2][6][6][3];
+    } prob_flag_delta;
     struct {
         RK_U32 partition[4][4][4];
         RK_U32 skip[3][2];
@@ -246,6 +253,7 @@ typedef struct VP9Context {
     RK_S32 first_partition_size;
     MppBufSlots slots;
     MppBufSlots packet_slots;
+    MppDecCfgSet *cfg;
     HalDecTask *task;
     RK_S32 eos;       ///< current packet contains an EOS/EOB NAL
     RK_S64 pts;

@@ -76,14 +76,21 @@ static MPP_RET jpege_init_v2(void *ctx, EncImplCfg *cfg)
     mpp_assert(cfg->coding = MPP_VIDEO_CodingMJPEG);
     cfg->task_count = 1;
 
-    /* init default fps config */
-    MppEncRcCfg *rc = &p->cfg->rc;
-    rc->fps_in_flex = 0;
-    rc->fps_in_num = 30;
-    rc->fps_in_denorm = 1;
-    rc->fps_out_flex = 0;
-    rc->fps_out_num = 30;
-    rc->fps_out_denorm = 1;
+    {
+        /* init default rc config */
+        MppEncRcCfg *rc = &p->cfg->rc;
+        MppEncJpegCfg *jpeg_cfg = &p->cfg->codec.jpeg;
+
+        rc->fps_in_flex = 0;
+        rc->fps_in_num = 30;
+        rc->fps_in_denorm = 1;
+        rc->fps_out_flex = 0;
+        rc->fps_out_num = 30;
+        rc->fps_out_denorm = 1;
+        rc->rc_mode = MPP_ENC_RC_MODE_FIXQP;
+        /* init default quant */
+        jpeg_cfg->quant = 10;
+    }
 
     jpege_dbg_func("leave ctx %p\n", ctx);
     return MPP_OK;
@@ -159,10 +166,18 @@ static MPP_RET jpege_proc_prep_cfg(MppEncPrepCfg *dst, MppEncPrepCfg *src)
         dst->change |= change;
 
         // parameter checking
-        if (dst->width > dst->hor_stride || dst->height > dst->ver_stride) {
-            mpp_err("invalid size w:h [%d:%d] stride [%d:%d]\n",
-                    dst->width, dst->height, dst->hor_stride, dst->ver_stride);
-            ret = MPP_ERR_VALUE;
+        if (dst->rotation == MPP_ENC_ROT_90 || dst->rotation == MPP_ENC_ROT_270) {
+            if (dst->height > dst->hor_stride || dst->width > dst->ver_stride) {
+                mpp_err("invalid size w:h [%d:%d] stride [%d:%d]\n",
+                        dst->width, dst->height, dst->hor_stride, dst->ver_stride);
+                ret = MPP_ERR_VALUE;
+            }
+        } else {
+            if (dst->width > dst->hor_stride || dst->height > dst->ver_stride) {
+                mpp_err("invalid size w:h [%d:%d] stride [%d:%d]\n",
+                        dst->width, dst->height, dst->hor_stride, dst->ver_stride);
+                ret = MPP_ERR_VALUE;
+            }
         }
 
         if (ret) {
@@ -505,10 +520,12 @@ static MPP_RET jpege_start(void *ctx, HalEncTask *task)
 static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
 {
     JpegeCtx *p = (JpegeCtx *)ctx;
+    MppFrame frame = task->frame;
     JpegeSyntax *syntax = &p->syntax;
     MppEncCfgSet *cfg = p->cfg;
     MppEncPrepCfg *prep = &cfg->prep;
     MppEncCodecCfg *codec = &cfg->codec;
+    MppEncSliceSplit *split = &cfg->split;
 
     jpege_dbg_func("enter ctx %p\n", ctx);
 
@@ -516,17 +533,52 @@ static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
     syntax->height      = prep->height;
     syntax->hor_stride  = prep->hor_stride;
     syntax->ver_stride  = prep->ver_stride;
+    syntax->mcu_w       = MPP_ALIGN(prep->width, 16) / 16;
+    syntax->mcu_h       = MPP_ALIGN(prep->height, 16) / 16;
     syntax->format      = prep->format;
     syntax->color       = prep->color;
+    syntax->rotation    = prep->rotation;
+    syntax->offset_x    = mpp_frame_get_offset_x(frame);
+    syntax->offset_y    = mpp_frame_get_offset_y(frame);
     syntax->quality     = codec->jpeg.quant;
     syntax->q_factor    = codec->jpeg.q_factor;
     syntax->qf_min      = codec->jpeg.qf_min;
     syntax->qf_max      = codec->jpeg.qf_max;
     syntax->qtable_y    = codec->jpeg.qtable_y;
     syntax->qtable_c    = codec->jpeg.qtable_u;
+    syntax->part_rows   = 0;
+    syntax->restart_ri  = 0;
+    syntax->low_delay   = 0;
+
+    if (split->split_mode) {
+        RK_U32 mb_h = MPP_ALIGN(prep->height, 16) / 16;
+        RK_U32 part_rows = 0;
+
+        if (split->split_mode == MPP_ENC_SPLIT_BY_CTU) {
+            RK_U32 part_mbs = split->split_arg;
+            RK_U32 mb_w = MPP_ALIGN(prep->width, 16) / 16;
+            RK_U32 mb_all = mb_w * mb_h;
+
+            if (part_mbs > 0 && part_mbs <= mb_all) {
+                part_rows = (part_mbs + mb_w - 1) / mb_w;
+                if (part_rows >= mb_h)
+                    part_rows = 0;
+            } else {
+                mpp_err_f("warning: invalid split arg %d > max %d\n",
+                          part_mbs, mb_all);
+            }
+        } else {
+            mpp_err_f("warning: only mcu split is supported\n");
+        }
+
+        if (part_rows) {
+            syntax->part_rows   = part_rows;
+            syntax->restart_ri  = syntax->mcu_w * part_rows;
+            syntax->low_delay   = cfg->base.low_delay && part_rows;
+        }
+    }
 
     task->valid = 1;
-    task->is_intra = 1;
     task->syntax.data = syntax;
     task->syntax.number = 1;
 

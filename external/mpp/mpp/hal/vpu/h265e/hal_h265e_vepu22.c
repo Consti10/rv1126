@@ -25,6 +25,7 @@
 #include "mpp_common.h"
 
 #include "h265e_syntax.h"
+#include "hal_h265e_debug.h"
 #include "hal_h265e_base.h"
 #include "hal_h265e_vepu22.h"
 
@@ -1367,12 +1368,6 @@ static MPP_RET vepu22_check_code_cfg_change(HalH265eCtx* ctx, MppEncH265Cfg* set
             cfg->intra_qp = set->intra_qp;
         }
 
-        if (set->change & MPP_ENC_H265_CFG_RC_QP_CHANGE) {
-            cfg->max_qp = set->max_qp;
-            cfg->min_qp = set->min_qp;
-            cfg->max_delta_qp = set->max_delta_qp;
-        }
-
         if (set->change & MPP_ENC_H265_CFG_INTRA_REFRESH_CHANGE) {
             cfg->intra_refresh_mode = set->intra_refresh_mode;
             cfg->intra_refresh_arg = set->intra_refresh_arg;
@@ -1786,9 +1781,9 @@ MPP_RET hal_h265e_vepu22_init(void *hal, MppHalCfg *cfg)
     ctx->pre_buf = NULL;
 
     /* pointer to cfg define in controller*/
-    ctx->cfg = cfg->cfg;
-    ctx->set = cfg->set;
-    ctx->int_cb = cfg->hal_int_cb;
+    ctx->cfg = NULL;    // NOTE: (MppEncCfgSet *) cfg->cfg;
+    ctx->set = NULL;    // NOTE: (MppEncCfgSet *) cfg->set;
+    ctx->enc_cb = cfg->dec_cb;
     ctx->option = H265E_SET_CFG_INIT;
     ctx->init = 0;
     ctx->rga_ctx = NULL;
@@ -2049,7 +2044,6 @@ MPP_RET hal_h265e_vepu22_wait(void *hal, HalTaskInfo *task)
         return MPP_ERR_VPUHW;
     }
 
-    info->is_intra = 0;
     feedback.status = result->fail_reason;
     if (feedback.status == 0) {
         void* buffer = NULL;
@@ -2063,13 +2057,6 @@ MPP_RET hal_h265e_vepu22_wait(void *hal, HalTaskInfo *task)
         feedback.src_idx = result->src_idx;
         feedback.enc_pic_cnt = result->enc_pic_cnt;
 
-        if (feedback.pic_type == H265E_PIC_TYPE_I ||
-            feedback.pic_type == H265E_PIC_TYPE_IDR ||
-            feedback.pic_type == H265E_PIC_TYPE_CRA) {
-            info->is_intra = 1;
-        } else {
-            info->is_intra = 0;
-        }
         buffer = mpp_buffer_get_ptr(info->output);
         size = result->bs_size;
         if (ctx->mOutFile != NULL && size > 0) {
@@ -2082,7 +2069,7 @@ MPP_RET hal_h265e_vepu22_wait(void *hal, HalTaskInfo *task)
         feedback.bs_size = 0;
     }
 
-    ctx->int_cb.callBack(ctx->int_cb.opaque, &feedback);
+    mpp_callback(ctx->enc_cb, ENC_CALLBACK_BASE, &feedback);
     task->enc.length = feedback.bs_size;
     hal_h265e_dbg_func("leave hal %p,status = %d,size = %d\n",
                        hal, feedback.status, feedback.bs_size);

@@ -74,6 +74,9 @@ MPP_RET mpp_frame_deinit(MppFrame *frame)
     if (p->meta)
         mpp_meta_put(p->meta);
 
+    if (p->stopwatch)
+        mpp_stopwatch_put(p->stopwatch);
+
     mpp_free(*frame);
     *frame = NULL;
     return MPP_OK;
@@ -160,6 +163,34 @@ void mpp_frame_set_meta(MppFrame frame, MppMeta meta)
     p->meta = meta;
 }
 
+void mpp_frame_set_stopwatch_enable(MppFrame frame, RK_S32 enable)
+{
+    if (check_is_mpp_frame(frame))
+        return ;
+
+    MppFrameImpl *p = (MppFrameImpl *)frame;
+    if (enable && NULL == p->stopwatch) {
+        char name[32];
+
+        snprintf(name, sizeof(name) - 1, "frm %8llx", p->pts);
+        p->stopwatch = mpp_stopwatch_get(name);
+        if (p->stopwatch)
+            mpp_stopwatch_set_show_on_exit(p->stopwatch, 1);
+    } else if (!enable && p->stopwatch) {
+        mpp_stopwatch_put(p->stopwatch);
+        p->stopwatch = NULL;
+    }
+}
+
+MppStopwatch mpp_frame_get_stopwatch(const MppFrame frame)
+{
+    if (check_is_mpp_frame(frame))
+        return NULL;
+
+    MppFrameImpl *p = (MppFrameImpl *)frame;
+    return p->stopwatch;
+}
+
 MPP_RET mpp_frame_copy(MppFrame dst, MppFrame src)
 {
     if (NULL == dst || check_is_mpp_frame(src)) {
@@ -202,9 +233,19 @@ RK_U32 mpp_frame_get_fbc_offset(MppFrame frame)
         return 0;
 
     MppFrameImpl *p = (MppFrameImpl *)frame;
-    if (MPP_FRAME_FMT_IS_FBC(p->fmt) && !p->fbc_offset)
-        p->fbc_offset = MPP_ALIGN(MPP_ALIGN(p->width, 16) *
-                                  MPP_ALIGN(p->height, 16) / 16, SZ_4K);
+
+    if (MPP_FRAME_FMT_IS_FBC(p->fmt)) {
+        RK_U32 fbc_version = p->fmt & MPP_FRAME_FBC_MASK;
+        RK_U32 fbc_offset = 0;
+
+        if (fbc_version == MPP_FRAME_FBC_AFBC_V1) {
+            fbc_offset = MPP_ALIGN(MPP_ALIGN(p->width, 16) *
+                                   MPP_ALIGN(p->height, 16) / 16, SZ_4K);
+        } else if (fbc_version == MPP_FRAME_FBC_AFBC_V2) {
+            fbc_offset = 0;
+        }
+        p->fbc_offset = fbc_offset;
+    }
 
     return p->fbc_offset;
 }
@@ -235,8 +276,11 @@ RK_U32 mpp_frame_get_fbc_stride(MppFrame frame)
 
 MPP_FRAME_ACCESSORS(RK_U32, width)
 MPP_FRAME_ACCESSORS(RK_U32, height)
+MPP_FRAME_ACCESSORS(RK_U32, hor_stride_pixel)
 MPP_FRAME_ACCESSORS(RK_U32, hor_stride)
 MPP_FRAME_ACCESSORS(RK_U32, ver_stride)
+MPP_FRAME_ACCESSORS(RK_U32, offset_x)
+MPP_FRAME_ACCESSORS(RK_U32, offset_y)
 MPP_FRAME_ACCESSORS(RK_U32, mode)
 MPP_FRAME_ACCESSORS(RK_U32, discard)
 MPP_FRAME_ACCESSORS(RK_U32, viewid)

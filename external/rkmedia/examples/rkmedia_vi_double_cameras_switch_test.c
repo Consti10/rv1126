@@ -46,23 +46,25 @@ int main(int argc, char *argv[]) {
   int id = 0;
   char *iq_dir = NULL;
   if (argc >= 2) {
-      if (strstr(argv[1], "rgb"))
-          id = 0;
-      else if (strstr(argv[1], "ir"))
-          id = 1;
-      else
-          usage(argv[0]);
+    if (strstr(argv[1], "rgb"))
+      id = 0;
+    else if (strstr(argv[1], "ir"))
+      id = 1;
+    else
+      usage(argv[0]);
   }
   if (argc >= 3) {
-      iq_dir = argv[2];
-      if (access(iq_dir, R_OK))
-          usage(argv[0]);
+    iq_dir = argv[2];
+    if (access(iq_dir, R_OK))
+      usage(argv[0]);
   }
 
-  rk_aiq_sys_ctx_t *ctx0 = aiq_double_cam_init(0, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
+  rk_aiq_sys_ctx_t *ctx0 =
+      aiq_double_cam_init(0, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
   if (!ctx0)
     return -1;
-  rk_aiq_sys_ctx_t *ctx1 = aiq_double_cam_init(1, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
+  rk_aiq_sys_ctx_t *ctx1 =
+      aiq_double_cam_init(1, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
   if (!ctx1)
     return -1;
 
@@ -70,7 +72,7 @@ int main(int argc, char *argv[]) {
   VI_CHN_ATTR_S vi_chn_attr;
   memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
   vi_chn_attr.pcVideoNode = "rkispp_scale1";
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = video_width;
   vi_chn_attr.u32Height = video_hegith;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
   }
   memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
   vi_chn_attr.pcVideoNode = "rkispp_scale1";
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = video_width;
   vi_chn_attr.u32Height = video_hegith;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;

@@ -81,10 +81,10 @@ static int queue_read(AUDIO_QUEUE_S *queue, unsigned char *buffer, int bytes) {
 }
 
 static void queue_tune(AUDIO_QUEUE_S *queue) {
+  /* Copy the rest of the sample to the beginning of the Buffer */
+  memcpy(queue->buffer, queue->buffer + queue->roffset, queue->buffer_size - queue->roffset);
   queue->buffer_size = queue->buffer_size - queue->roffset;
   queue->roffset = 0;
-  /* Copy the rest of the sample to the beginning of the Buffer */
-  memcpy(queue->buffer, queue->buffer + queue->roffset, queue->buffer_size);
 }
 
 int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {

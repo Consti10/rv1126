@@ -115,6 +115,30 @@ MPP_RET mpp_enc_hal_deinit(MppEncHal ctx)
     return MPP_OK;
 }
 
+MPP_RET mpp_enc_hal_prepare(void *hal)
+{
+    if (NULL == hal) {
+        mpp_err_f("found NULL input ctx %p\n", hal);
+        return MPP_ERR_NULL_PTR;
+    }
+
+    MppEncHalImpl *p = (MppEncHalImpl*)hal;
+    if (!p->api || !p->api->prepare)
+        return MPP_OK;
+
+    return p->api->prepare(p->ctx);
+}
+
+MPP_RET mpp_enc_hal_check_part_mode(MppEncHal ctx)
+{
+    MppEncHalImpl *p = (MppEncHalImpl*)ctx;
+
+    if (p && p->api && p->api->part_start && p->api->part_wait)
+        return MPP_OK;
+
+    return MPP_NOK;
+}
+
 #define MPP_ENC_HAL_TASK_FUNC(func) \
     MPP_RET mpp_enc_hal_##func(void *hal, HalEncTask *task)             \
     {                                                                   \
@@ -134,4 +158,6 @@ MPP_ENC_HAL_TASK_FUNC(get_task)
 MPP_ENC_HAL_TASK_FUNC(gen_regs)
 MPP_ENC_HAL_TASK_FUNC(start)
 MPP_ENC_HAL_TASK_FUNC(wait)
+MPP_ENC_HAL_TASK_FUNC(part_start)
+MPP_ENC_HAL_TASK_FUNC(part_wait)
 MPP_ENC_HAL_TASK_FUNC(ret_task)

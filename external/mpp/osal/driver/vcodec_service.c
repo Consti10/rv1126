@@ -30,11 +30,20 @@
 #include "mpp_common.h"
 
 #include "vpu.h"
+#include "mpp_soc.h"
+#include "mpp_platform.h"
 #include "vcodec_service.h"
 #include "vcodec_service_api.h"
 
 #define MAX_REGS_COUNT      3
 #define MPX_EXTRA_INFO_NUM  16
+#define MAX_INFO_COUNT      16
+#define INFO_FORMAT_TYPE    3
+
+typedef struct MppReq_t {
+    RK_U32 *req;
+    RK_U32  size;
+} MppReq;
 
 typedef struct VcodecExtraSlot_t {
     RK_U32              reg_idx;
@@ -57,6 +66,7 @@ typedef struct VcodecRegCfg_t {
 
 typedef struct MppDevVcodecService_t {
     RK_S32              client_type;
+    RK_U64              fmt;
     RK_S32              fd;
     RK_S32              max_regs;
     RK_U32              reg_size;
@@ -65,38 +75,58 @@ typedef struct MppDevVcodecService_t {
     RK_S32              reg_poll_idx;
 
     VcodecRegCfg        regs[MAX_REGS_COUNT];
+
+    RK_S32              info_count;
+    MppDevInfoCfg       info[MAX_INFO_COUNT];
 } MppDevVcodecService;
 
 /* For vpu1 / vpu2 */
 static const char *mpp_vpu_dev[] = {
     "/dev/vpu_service",
     "/dev/vpu-service",
+    "/dev/mpp_service",
 };
 
 /* For hevc 4K decoder */
 static const char *mpp_hevc_dev[] = {
     "/dev/hevc_service",
     "/dev/hevc-service",
+    "/dev/mpp_service",
 };
 
 /* For H.264/H.265/VP9 4K decoder */
 static const char *mpp_rkvdec_dev[] = {
     "/dev/rkvdec",
+    "/dev/mpp_service",
 };
 
 /* For H.264 4K encoder */
 static const char *mpp_rkvenc_dev[] = {
     "/dev/rkvenc",
+    "/dev/mpp_service",
 };
 
 /* For avs+ decoder */
 static const char *mpp_avsd_dev[] = {
     "/dev/avsd",
+    "/dev/mpp_service",
 };
 
 /* For H.264 / jpeg encoder */
 static const char *mpp_vepu_dev[] = {
     "/dev/vepu",
+    "/dev/mpp_service",
+};
+
+/* For H.265 encoder */
+static const char *mpp_h265e_dev[] = {
+    "/dev/h265e",
+    "/dev/mpp_service",
+};
+
+/* For jpeg decoder */
+static const char *mpp_jpegd_dev[] = {
+    "/dev/mpp_service",
 };
 
 #define mpp_find_device(dev) _mpp_find_device(dev, MPP_ARRAY_ELEMS(dev))
@@ -110,6 +140,237 @@ static const char *_mpp_find_device(const char **dev, RK_U32 size)
             return dev[i];
 
     return NULL;
+}
+
+const char *mpp_get_platform_dev_name(MppCtxType type, MppCodingType coding, RK_U32 platform)
+{
+    const char *dev = NULL;
+
+    if ((platform & HAVE_RKVDEC) && (type == MPP_CTX_DEC) &&
+        (coding == MPP_VIDEO_CodingAVC ||
+         coding == MPP_VIDEO_CodingHEVC ||
+         coding == MPP_VIDEO_CodingVP9)) {
+        dev = mpp_find_device(mpp_rkvdec_dev);
+    } else if ((platform & HAVE_HEVC_DEC) && (type == MPP_CTX_DEC) &&
+               (coding == MPP_VIDEO_CodingHEVC)) {
+        dev = mpp_find_device(mpp_hevc_dev);
+    } else if ((platform & HAVE_AVSDEC) && (type == MPP_CTX_DEC) &&
+               (coding == MPP_VIDEO_CodingAVS)) {
+        dev = mpp_find_device(mpp_avsd_dev);
+    } else if ((platform & HAVE_RKVENC) && (type == MPP_CTX_ENC) &&
+               (coding == MPP_VIDEO_CodingAVC)) {
+        dev = mpp_find_device(mpp_rkvenc_dev);
+    } else if ((platform & HAVE_VEPU22) && (type == MPP_CTX_ENC) &&
+               (coding == MPP_VIDEO_CodingHEVC)) {
+        dev = mpp_find_device(mpp_h265e_dev);
+    } else {
+        if (type == MPP_CTX_ENC)
+            dev = mpp_find_device(mpp_vepu_dev);
+
+        if (dev == NULL)
+            dev = mpp_find_device(mpp_vpu_dev);
+    }
+
+    return dev;
+}
+
+const char *mpp_get_vcodec_dev_name(MppCtxType type, MppCodingType coding)
+{
+    const char *dev = NULL;
+    RockchipSocType soc_type = mpp_get_soc_type();
+
+    switch (soc_type) {
+    case ROCKCHIP_SOC_RK3036 : {
+        /* rk3036 do NOT have encoder */
+        if (type == MPP_CTX_ENC)
+            dev = NULL;
+        else if (coding == MPP_VIDEO_CodingHEVC && type == MPP_CTX_DEC)
+            dev = mpp_find_device(mpp_hevc_dev);
+        else
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3066 :
+    case ROCKCHIP_SOC_RK3188 : {
+        /* rk3066/rk3188 have vpu1 only */
+        dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3288 :
+    case ROCKCHIP_SOC_RK312X :
+    case ROCKCHIP_SOC_RK3368 :
+    case ROCKCHIP_SOC_RK3326 :
+    case ROCKCHIP_SOC_PX30 : {
+        /*
+         * rk3288/rk312x/rk3368 have codec:
+         * 1 - vpu1
+         * 2 - RK hevc decoder
+         */
+        if (coding == MPP_VIDEO_CodingHEVC && type == MPP_CTX_DEC)
+            dev = mpp_find_device(mpp_hevc_dev);
+        else
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3128H : {
+        /*
+         * rk3128H have codec:
+         * 1 - vpu2
+         * 2 - RK H.264/H.265 1080p@60fps decoder
+         * NOTE: rk3128H do NOT have jpeg encoder
+         */
+        if (type == MPP_CTX_DEC &&
+            (coding == MPP_VIDEO_CodingAVC ||
+             coding == MPP_VIDEO_CodingHEVC))
+            dev = mpp_find_device(mpp_rkvdec_dev);
+        else if (type == MPP_CTX_ENC && coding == MPP_VIDEO_CodingMJPEG)
+            dev = NULL;
+        else if (type == MPP_CTX_DEC && coding == MPP_VIDEO_CodingVP9)
+            dev = NULL;
+        else
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3399 :
+    case ROCKCHIP_SOC_RK3229 : {
+        /*
+         * rk3399/rk3229 have codec:
+         * 1 - vpu2
+         * 2 - RK H.264/H.265/VP9 4K decoder
+         */
+        if (type == MPP_CTX_DEC &&
+            (coding == MPP_VIDEO_CodingAVC ||
+             coding == MPP_VIDEO_CodingHEVC ||
+             coding == MPP_VIDEO_CodingVP9))
+            dev = mpp_find_device(mpp_rkvdec_dev);
+        else
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3228 : {
+        /*
+         * rk3228 have codec:
+         * 1 - vpu2
+         * 2 - RK H.264/H.265 4K decoder
+         * NOTE: rk3228 do NOT have jpeg encoder
+         */
+        if (type == MPP_CTX_DEC &&
+            (coding == MPP_VIDEO_CodingAVC ||
+             coding == MPP_VIDEO_CodingHEVC))
+            dev = mpp_find_device(mpp_rkvdec_dev);
+        else if (type == MPP_CTX_ENC && coding == MPP_VIDEO_CodingMJPEG)
+            dev = NULL;
+        else
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3228H : {
+        /*
+         * rk3228h has codec:
+         * 1 - vpu2
+         * 2 - RK H.264/H.265 4K decoder
+         * 3 - avs+ decoder
+         * 4 - H.265 encoder
+         */
+        if (type == MPP_CTX_ENC) {
+            if (coding == MPP_VIDEO_CodingHEVC)
+                dev = mpp_find_device(mpp_h265e_dev);
+            else
+                dev = mpp_find_device(mpp_vepu_dev);
+        } else if (type == MPP_CTX_DEC) {
+            if (coding == MPP_VIDEO_CodingAVS)
+                dev = mpp_find_device(mpp_avsd_dev);
+            else if (coding == MPP_VIDEO_CodingAVC ||
+                     coding == MPP_VIDEO_CodingHEVC)
+                dev = mpp_find_device(mpp_rkvdec_dev);
+            else
+                dev = mpp_find_device(mpp_vpu_dev);
+        }
+    } break;
+    case ROCKCHIP_SOC_RK3328 : {
+        /*
+         * rk3228 has codec:
+         * 1 - vpu2
+         * 2 - RK H.264/H.265/VP9 4K decoder
+         * 4 - H.265 encoder
+         */
+        if (type == MPP_CTX_ENC) {
+            if (coding == MPP_VIDEO_CodingHEVC)
+                dev = mpp_find_device(mpp_h265e_dev);
+            else
+                dev = mpp_find_device(mpp_vepu_dev);
+        } else if (type == MPP_CTX_DEC) {
+            if (coding == MPP_VIDEO_CodingAVC ||
+                coding == MPP_VIDEO_CodingHEVC ||
+                coding == MPP_VIDEO_CodingVP9) {
+                dev = mpp_find_device(mpp_rkvdec_dev);
+            } else
+                dev = mpp_find_device(mpp_vpu_dev);
+        }
+    } break;
+    case ROCKCHIP_SOC_RV1108 : {
+        /*
+         * rv1108 has codec:
+         * 1 - vpu2
+         * 2 - RK H.264 4K decoder
+         * 3 - RK H.264 4K encoder
+         */
+        if (coding == MPP_VIDEO_CodingAVC) {
+            if (type == MPP_CTX_ENC)
+                dev = mpp_find_device(mpp_rkvenc_dev);
+            else
+                dev = mpp_find_device(mpp_rkvdec_dev);
+        } else if (coding == MPP_VIDEO_CodingMJPEG)
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RV1109 :
+    case ROCKCHIP_SOC_RV1126 : {
+        /*
+         * rv1108 has codec:
+         * 1 - vpu2 for jpeg encoder and decoder
+         * 2 - RK H.264/H.265 4K decoder
+         * 3 - RK H.264/H.265 4K encoder
+         */
+        if (coding == MPP_VIDEO_CodingAVC || coding == MPP_VIDEO_CodingHEVC) {
+            if (type == MPP_CTX_ENC)
+                dev = mpp_find_device(mpp_rkvenc_dev);
+            else
+                dev = mpp_find_device(mpp_rkvdec_dev);
+        } else if (coding == MPP_VIDEO_CodingMJPEG)
+            dev = mpp_find_device(mpp_vpu_dev);
+    } break;
+    case ROCKCHIP_SOC_RK3566 :
+    case ROCKCHIP_SOC_RK3568 : {
+        /*
+         * rk3566/rk3568 has codec:
+         * 1 - vpu2 for jpeg/vp8 encoder and decoder
+         * 2 - RK H.264/H.265/VP9 4K decoder
+         * 3 - RK H.264/H.265 4K encoder
+         * 3 - RK jpeg decoder
+         */
+        if (type == MPP_CTX_DEC) {
+            if (coding == MPP_VIDEO_CodingAVC ||
+                coding == MPP_VIDEO_CodingHEVC ||
+                coding == MPP_VIDEO_CodingVP9)
+                dev = mpp_find_device(mpp_rkvdec_dev);
+            else if (coding == MPP_VIDEO_CodingMJPEG)
+                dev = mpp_find_device(mpp_jpegd_dev);
+            else
+                dev = mpp_find_device(mpp_vpu_dev);
+        } else if (type == MPP_CTX_ENC) {
+            if (coding == MPP_VIDEO_CodingAVC ||
+                coding == MPP_VIDEO_CodingHEVC)
+                dev = mpp_find_device(mpp_rkvenc_dev);
+            else if (coding == MPP_VIDEO_CodingMJPEG ||
+                     coding == MPP_VIDEO_CodingVP8)
+                dev = mpp_find_device(mpp_vpu_dev);
+            else
+                dev = NULL;
+        }
+    } break;
+    default : {
+        /* default case for unknown compatible  */
+        RK_U32 vcodec_type = mpp_get_vcodec_type();
+
+        dev = mpp_get_platform_dev_name(type, coding, vcodec_type);
+    } break;
+    }
+
+    return dev;
 }
 
 static RK_S32 vcodec_service_ioctl(RK_S32 fd, RK_S32 cmd, void *regs, RK_S32 size)
@@ -126,6 +387,33 @@ static void extra_info_init(VcodecExtraInfo *info)
 {
     info->magic = EXTRA_INFO_MAGIC;
     info->count = 0;
+}
+
+static void update_extra_info(VcodecExtraInfo *info, char* fmt, VcodecRegCfg* send_cfg)
+{
+    void *reg_set = send_cfg->reg_set;
+    RK_U32 reg_size = send_cfg->reg_size;
+
+    if (info->count) {
+        if (!strstr(fmt, "mjpeg")) {
+            RK_U32 *reg = (RK_U32*)reg_set;
+            RK_U32 i = 0;
+
+            for (i = 0; i < info->count; i++) {
+                VcodecExtraSlot *slot = &info->slots[i];
+
+                reg[slot->reg_idx] |= (slot->offset << 10);
+            }
+            info->count = 0;
+        } else {
+            void *extra_data = reg_set + reg_size;
+            RK_S32 extra_size = sizeof(send_cfg->extra_info);
+
+            memcpy(extra_data, info, extra_size);
+            send_cfg->reg_size += extra_size;
+            extra_info_init(info);
+        }
+    }
 }
 
 MPP_RET vcodec_service_init(void *ctx, MppClientType type)
@@ -187,13 +475,8 @@ MPP_RET vcodec_service_init(void *ctx, MppClientType type)
         reg_size = VEPU1_REGISTERS;
     } break;
     case VPU_CLIENT_VEPU2 : {
-        name = mpp_find_device(mpp_vpu_dev);
-        client_type = VPU_ENC;
-        reg_size = VEPU2_REGISTERS;
-    } break;
-    case VPU_CLIENT_VEPU2_LITE : {
         name = mpp_find_device(mpp_vepu_dev);
-        if (name == NULL)
+        if (NULL == name)
             name = mpp_find_device(mpp_vpu_dev);
         client_type = VPU_ENC;
         reg_size = VEPU2_REGISTERS;
@@ -290,8 +573,21 @@ MPP_RET vcodec_service_fd_trans(void *ctx, MppDevRegOffsetCfg *cfg)
         MppDevVcodecService *p = (MppDevVcodecService *)ctx;
         VcodecRegCfg *send_cfg = &p->regs[p->reg_send_idx];
         VcodecExtraInfo *extra = &send_cfg->extra_info;
-        VcodecExtraSlot *slot = &extra->slots[extra->count];
+        VcodecExtraSlot *slot;
+        RK_U32 i;
 
+        for (i = 0; i < extra->count; i++) {
+            slot = &extra->slots[i];
+
+            if (slot->reg_idx == cfg->reg_idx) {
+                mpp_err_f("reg[%d] offset has been set, cover old %d -> %d\n",
+                          slot->reg_idx, slot->offset, cfg->offset);
+                slot->offset = cfg->offset;
+                return MPP_OK;
+            }
+        }
+
+        slot = &extra->slots[extra->count];
         slot->reg_idx = cfg->reg_idx;
         slot->offset = cfg->offset;
         extra->count++;
@@ -306,20 +602,12 @@ MPP_RET vcodec_service_cmd_send(void *ctx)
     VcodecRegCfg *send_cfg = &p->regs[p->reg_send_idx];
     VcodecExtraInfo *extra = &send_cfg->extra_info;
     void *reg_set = send_cfg->reg_set;
-    RK_U32 reg_size = send_cfg->reg_size;
+    char *fmt = (char*)&p->fmt;
 
-    if (extra->count) {
-        void *extra_data = reg_set + reg_size;
-        RK_S32 extra_size = sizeof(send_cfg->extra_info);
-
-        memcpy(extra_data, extra, extra_size);
-        reg_size += extra_size;
-
-        extra_info_init(extra);
-    }
+    update_extra_info(extra, fmt, send_cfg);
 
     MPP_RET ret = vcodec_service_ioctl(p->fd, VPU_IOC_SET_REG,
-                                       reg_set, reg_size);
+                                       reg_set, send_cfg->reg_size);
     if (ret) {
         mpp_err_f("ioctl VPU_IOC_SET_REG failed ret %d errno %d %s\n",
                   ret, errno, strerror(errno));
@@ -329,6 +617,7 @@ MPP_RET vcodec_service_cmd_send(void *ctx)
     p->reg_send_idx++;
     if (p->reg_send_idx >= p->max_regs)
         p->reg_send_idx = 0;
+    p->info_count = 0;
 
     return ret;
 }
@@ -354,6 +643,27 @@ MPP_RET vcodec_service_cmd_poll(void *ctx)
     return ret;
 }
 
+MPP_RET vcodec_service_set_info(void *ctx, MppDevInfoCfg *cfg)
+{
+    MppDevVcodecService *p = (MppDevVcodecService *)ctx;
+
+    if (!p->info_count)
+        memset(p->info, 0, sizeof(p->info));
+
+    if (p->info_count >= MAX_INFO_COUNT) {
+        mpp_err("info count reach max\n");
+        return MPP_NOK;
+    }
+
+    memcpy(&p->info[p->info_count], cfg, sizeof(MppDevInfoCfg));
+    p->info_count++;
+
+    if (cfg->type == INFO_FORMAT_TYPE) {
+        p->fmt = cfg->data;
+    }
+    return MPP_OK;
+}
+
 const MppDevApi vcodec_service_api = {
     "vcodec_service",
     sizeof(MppDevVcodecService),
@@ -363,6 +673,7 @@ const MppDevApi vcodec_service_api = {
     vcodec_service_reg_rd,
     vcodec_service_fd_trans,
     NULL,
+    vcodec_service_set_info,
     vcodec_service_cmd_send,
     vcodec_service_cmd_poll,
 };

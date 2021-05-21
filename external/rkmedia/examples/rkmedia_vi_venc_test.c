@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -39,31 +40,104 @@ void video_packet_cb(MEDIA_BUFFER mb) {
   RK_MPI_MB_ReleaseBuffer(mb);
 }
 
-int main(int argc, char *argv[]) {
-  int ret = 0;
-  RK_MPI_SYS_Init();
+static RK_CHAR optstr[] = "?:a::h:w:e:d:";
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"height", required_argument, NULL, 'h'},
+    {"width", required_argument, NULL, 'w'},
+    {"encode", required_argument, NULL, 'e'},
+    {"device_name", required_argument, NULL, 'd'},
+    {NULL, 0, NULL, 0},
+};
+
+static void print_usage(const RK_CHAR *name) {
+  printf("usage example:\n");
 #ifdef RKAIQ
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RK_BOOL fec_enable = RK_FALSE;
-  int fps = 30;
-  char *iq_file_dir = NULL;
-  if ((argc > 1) && !strcmp(argv[1], "-h")) {
-    printf("\n\n/Usage:./%s [--aiq iq_file_dir]\n", argv[0]);
-    printf("\t --aiq iq_file_dir : init isp\n");
-    return -1;
-  }
-  if (argc == 3) {
-    if (strcmp(argv[1], "--aiq") == 0) {
-      iq_file_dir = argv[2];
+  printf("\t%s "
+         "[-a | --aiq /oem/etc/iqfiles/] "
+         "[-h | --height 1080] "
+         "[-w | --width 1920] "
+         "[-e | --encode 0] "
+         "[-d | --device_name rkispp_scale0]\n",
+         name);
+  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
+         "/oem/etc/iqfiles/, "
+         "set dirpath empty to using path by default, without this option aiq "
+         "should run in other application\n");
+#else
+  printf("\t%s "
+         "[-h | --height 1080] "
+         "[-w | --width 1920] "
+         "[-e | --encode 0] "
+         "[-d | --device_name rkispp_scale0]\n",
+         name);
+#endif
+  printf("\t-h | --height: VI height, Default:1080\n");
+  printf("\t-w | --width: VI width, Default:1920\n");
+  printf("\t-e | --encode: encode type, Default:0, set 0 to use H264, set 1 to "
+         "use H265\n");
+  printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0, "
+         "Option:[rkispp_scale0, rkispp_scale1, rkispp_scale2]\n");
+}
+
+int main(int argc, char *argv[]) {
+  RK_U32 u32Width = 1920;
+  RK_U32 u32Height = 1080;
+  RK_U32 encode_type = 0;
+  RK_CHAR *device_name = "rkispp_scale0";
+  RK_CHAR *iq_file_dir = NULL;
+  int ret = 0;
+  int c;
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    const char *tmp_optarg = optarg;
+    switch (c) {
+    case 'a':
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        iq_file_dir = (char *)tmp_optarg;
+      } else {
+        iq_file_dir = "/oem/etc/iqfiles";
+      }
+      break;
+    case 'h':
+      u32Height = atoi(optarg);
+      break;
+    case 'w':
+      u32Width = atoi(optarg);
+      break;
+    case 'e':
+      encode_type = atoi(optarg);
+      break;
+    case 'd':
+      device_name = optarg;
+      break;
+    case '?':
+    default:
+      print_usage(argv[0]);
+      return 0;
     }
   }
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
-#else
-  (void)argc;
-  (void)argv;
+
+  printf("device_name: %s\n\n", device_name);
+  printf("#height: %d\n\n", u32Height);
+  printf("#width: %d\n\n", u32Width);
+  printf("#encode_type: %d\n\n", encode_type);
+
+  if (iq_file_dir) {
+#ifdef RKAIQ
+    printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+    RK_BOOL fec_enable = RK_FALSE;
+    int fps = 30;
+    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
+    SAMPLE_COMM_ISP_Run();
+    SAMPLE_COMM_ISP_SetFrameRate(fps);
 #endif
+  }
+
+  RK_MPI_SYS_Init();
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = "rkispp_scale0";
   vi_chn_attr.u32BufCnt = 4; // should be >= 4
@@ -79,14 +153,26 @@ int main(int argc, char *argv[]) {
   }
 
   VENC_CHN_ATTR_S venc_chn_attr;
-  venc_chn_attr.stVencAttr.enType = RK_CODEC_TYPE_H264;
+  switch (encode_type) {
+  case 0:
+    venc_chn_attr.stVencAttr.enType = RK_CODEC_TYPE_H264;
+    venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
+    break;
+  case 1:
+    venc_chn_attr.stVencAttr.enType = RK_CODEC_TYPE_H265;
+    venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H265CBR;
+    break;
+  default:
+    venc_chn_attr.stVencAttr.enType = RK_CODEC_TYPE_H264;
+    venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
+    break;
+  }
   venc_chn_attr.stVencAttr.imageType = IMAGE_TYPE_NV12;
   venc_chn_attr.stVencAttr.u32PicWidth = 1920;
   venc_chn_attr.stVencAttr.u32PicHeight = 1080;
   venc_chn_attr.stVencAttr.u32VirWidth = 1920;
   venc_chn_attr.stVencAttr.u32VirHeight = 1080;
   venc_chn_attr.stVencAttr.u32Profile = 77;
-  venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
   venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = 30;
   venc_chn_attr.stRcAttr.stH264Cbr.u32BitRate = 1920 * 1080 * 30 / 14;
   venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateDen = 0;
@@ -129,9 +215,13 @@ int main(int argc, char *argv[]) {
   while (!quit) {
     usleep(100);
   }
+
+  if (iq_file_dir) {
 #ifdef RKAIQ
-  SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
 #endif
+  }
+
   printf("%s exit!\n", __func__);
   // unbind first
   ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);

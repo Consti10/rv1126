@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -44,16 +45,16 @@ int menu() {
   char choose[5];
 
   printf("\n***************************************\n");
-  printf("©¦²Ëµ¥©¦\n");
+  printf("Â©Â¦Â²Ã‹ÂµÂ¥Â©Â¦\n");
   printf("__________________________________\n");
   printf("|    0. quit       \n");
-  printf("©¦1. Normal  \n");
-  printf("©¦2. HDRX2  \n");
-  printf("©¦3. HDRX3  \n");
-  printf("©¦4. FEC ON \n");
-  printf("©¦5. FEC OFF\n");
-  printf("©¦6. LDCH    \n");
-  printf("©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤\n");
+  printf("Â©Â¦1. Normal  \n");
+  printf("Â©Â¦2. HDRX2  \n");
+  printf("Â©Â¦3. HDRX3  \n");
+  printf("Â©Â¦4. FEC ON \n");
+  printf("Â©Â¦5. FEC OFF\n");
+  printf("Â©Â¦6. LDCH    \n");
+  printf("Â©Â¸Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤Â©Â¤\n");
   printf("**************************************\n\n");
 
   do {
@@ -78,6 +79,25 @@ int menu_ldch() {
   return menu;
 }
 
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"help", no_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0},
+};
+
+static void print_usage(const RK_CHAR *name) {
+  printf("usage example:\n");
+  printf("\t%s [-a | --aiq /oem/etc/iqfiles/] "
+         " [-h | --heght]"
+         "\n",
+         name);
+  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
+         "/oem/etc/iqfiles/. "
+         "without this option, default path \"/oem/etc/iqfiles/\" would be "
+         "userd.\n");
+  printf("\t-h | --help: show help info.\n");
+}
+
 int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigterm_handler);
@@ -85,12 +105,24 @@ int main(int argc, char *argv[]) {
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RK_BOOL fec_enable = RK_FALSE;
   int fps = 30;
-  char *iq_file_dir = NULL;
-  if (argc == 3) {
-    if (strcmp(argv[1], "--aiq") == 0) {
-      iq_file_dir = argv[2];
+  char *iq_file_dir = "/oem/etc/iqfiles/";
+
+  int c;
+  while ((c = getopt_long(argc, argv, "", long_options, NULL)) != -1) {
+    switch (c) {
+    case 'a':
+      iq_file_dir = optarg;
+      break;
+    case 'h':
+      print_usage(argv[0]);
+      return 0;
+    case '?':
+    default:
+      print_usage(argv[0]);
+      return 0;
     }
   }
+
   char *tmp = getenv("HDR_MODE");
   if (tmp) {
     if (strstr(tmp, "32")) {
@@ -149,7 +181,7 @@ restart:
 
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = "rkispp_scale0";
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = 1920;
   vi_chn_attr.u32Height = 1080;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -190,12 +222,12 @@ restart:
   running = RK_TRUE;
   /*
        printf(" |   0. quit   \n");
-       printf("©¦1. Normal  \n");
-        printf("©¦2. HDRX2	\n");
-        printf("©¦3. HDRX3	\n");
-        printf("©¦4. FEC ON \n");
-        printf("©¦5. FEC OFF\n");
-       printf("©¦6. LDCH level \n");
+       printf("Â©Â¦1. Normal  \n");
+        printf("Â©Â¦2. HDRX2	\n");
+        printf("Â©Â¦3. HDRX3	\n");
+        printf("Â©Â¦4. FEC ON \n");
+        printf("Â©Â¦5. FEC OFF\n");
+       printf("Â©Â¦6. LDCH level \n");
   */
   while (!quit) {
     switch (menu()) {

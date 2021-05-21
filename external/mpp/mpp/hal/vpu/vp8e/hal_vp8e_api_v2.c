@@ -43,7 +43,7 @@ static MPP_RET hal_vp8e_init(void *hal, MppEncHalCfg *cfg)
 {
     const MppEncHalApi  *p_api = NULL;
     Halvp8eCtx *ctx = (Halvp8eCtx *)hal;
-    MppDeviceId dev = DEV_ID_BUTT;
+    MppClientType type = VPU_CLIENT_BUTT;
     void* hw_ctx = NULL;
 
     memset(ctx, 0, sizeof(Halvp8eCtx));
@@ -54,10 +54,10 @@ static MPP_RET hal_vp8e_init(void *hal, MppEncHalCfg *cfg)
         RK_U32 hw_flag = mpp_get_vcodec_type();
         if (hw_flag & HAVE_VEPU2) {
             p_api = &hal_vp8e_vepu2;
-            dev = DEV_VEPU;
+            type = VPU_CLIENT_VEPU2;
         } else if (hw_flag & HAVE_VEPU1) {
             p_api = &hal_vp8e_vepu1;
-            dev = DEV_VEPU;
+            type = VPU_CLIENT_VEPU1;
         } else {
             mpp_err_f("Failed to init due to unsupported hard mode, hw_flag = %d\n", hw_flag);
             return MPP_ERR_INIT;
@@ -65,15 +65,15 @@ static MPP_RET hal_vp8e_init(void *hal, MppEncHalCfg *cfg)
     }
 
     mpp_assert(p_api);
-    mpp_assert(dev != DEV_ID_BUTT);
+    mpp_assert(type != VPU_CLIENT_BUTT);
 
-    hw_ctx = mpp_malloc_size(void, p_api->ctx_size);
+    hw_ctx = mpp_calloc_size(void, p_api->ctx_size);
     if (NULL == hw_ctx)
         return MPP_ERR_MALLOC;
 
     ctx->hw_ctx = hw_ctx;
     ctx->api = p_api;
-    cfg->device_id = dev;
+    cfg->type = type;
 
     return p_api->init(hw_ctx, cfg);
 }
@@ -93,8 +93,21 @@ static MPP_RET hal_vp8e_deinit(void *hal)
     return ret;
 }
 
+#define HAL_VP8E_FUNC(func) \
+    static MPP_RET hal_vp8e_##func(void *hal)                       \
+    {                                                               \
+        Halvp8eCtx *ctx = (Halvp8eCtx *)hal;                        \
+        const MppEncHalApi *api = ctx->api;                         \
+        void *hw_ctx = ctx->hw_ctx;                                 \
+                                                                    \
+        if (!hw_ctx || !api || !api->func)                          \
+            return MPP_OK;                                          \
+                                                                    \
+        return api->func(hw_ctx);                                   \
+    }
+
 #define HAL_VP8E_TASK_FUNC(func) \
-    static MPP_RET hal_vp8e_##func(void *hal, HalEncTask *task)    \
+    static MPP_RET hal_vp8e_##func(void *hal, HalEncTask *task)     \
     {                                                               \
         Halvp8eCtx *ctx = (Halvp8eCtx *)hal;                        \
         const MppEncHalApi *api = ctx->api;                         \
@@ -106,6 +119,7 @@ static MPP_RET hal_vp8e_deinit(void *hal)
         return api->func(hw_ctx, task);                             \
     }
 
+HAL_VP8E_FUNC(prepare)
 HAL_VP8E_TASK_FUNC(get_task)
 HAL_VP8E_TASK_FUNC(gen_regs)
 HAL_VP8E_TASK_FUNC(start)
@@ -113,15 +127,18 @@ HAL_VP8E_TASK_FUNC(wait)
 HAL_VP8E_TASK_FUNC(ret_task)
 
 const MppEncHalApi hal_api_vp8e_v2 = {
-    .name       = "hal_h264e",
+    .name       = "hal_vp8e",
     .coding     = MPP_VIDEO_CodingVP8,
     .ctx_size   = sizeof(Halvp8eCtx),
     .flag       = 0,
     .init       = hal_vp8e_init,
     .deinit     = hal_vp8e_deinit,
+    .prepare    = hal_vp8e_prepare,
     .get_task   = hal_vp8e_get_task,
     .gen_regs   = hal_vp8e_gen_regs,
     .start      = hal_vp8e_start,
     .wait       = hal_vp8e_wait,
+    .part_start = NULL,
+    .part_wait  = NULL,
     .ret_task   = hal_vp8e_ret_task,
 };

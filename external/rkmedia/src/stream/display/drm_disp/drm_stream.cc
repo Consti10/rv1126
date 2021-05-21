@@ -10,7 +10,7 @@ namespace easymedia {
 
 DRMStream::DRMStream(const char *param, bool as)
     : accept_scale(as), fps(0), connector_id(0), crtc_id(0), encoder_id(0),
-      plane_id(0), active(false), cur_mode_idx(0), drm_fmt(0), find_strict_match_wh(false),
+      plane_id(0), active(false), drm_fmt(0), find_strict_match_wh(false),
       fd(-1), res(nullptr) {
   memset(&img_info, 0, sizeof(img_info));
   img_info.pix_fmt = PIX_FMT_NONE;
@@ -235,51 +235,32 @@ bool DRMStream::GetAgreeableIDSet() {
   }
   // get mode info
   if (i < ids.count_connectors) {
-    auto dme = get_encoder_by_id(res, encoder_id);
-    active = (dme->crtc_id > 0 && dme->crtc_id == crtc_id);
-#if 0
-    if (active) {
-      uint64_t value = 0;
-      get_property_id(res, DRM_MODE_OBJECT_PLANE, plane_id, KEY_CRTC_W, &value);
-      int crtc_w = (int) value;
-      value = 0;
-      get_property_id(res, DRM_MODE_OBJECT_PLANE, plane_id, KEY_CRTC_H, &value);
-      int crtc_h = (int) value;
-      /* Does the resolution meet current needs? */
-      if (crtc_w && crtc_h)
-        active = ((img_info.width <= crtc_w) && (img_info.height <= crtc_h));
-    }
-#endif
+//    auto dme = get_encoder_by_id(res, encoder_id);
+//    active = (dme->crtc_id > 0 && dme->crtc_id == crtc_id);
 
-    if (!active) {
-      auto dmc = get_connector_by_id(res, connector_id);
-      int idx = -1;
-      int size = dmc->count_modes;
-      drmModeModeInfoPtr *modes =
-          (drmModeModeInfoPtr *)calloc(size, sizeof(*modes));
-      if (!modes)
-        return false;
-      for (int j = 0; j < size; j++)
-        modes[j] = &dmc->modes[j];
-      if (find_strict_match_wh) {
-        filter_modeinfo_by_wh(img_info.vir_width, img_info.vir_height, size,
-                              modes);
-        assert(size > 0);
-      }
-      if (fps > 0)
-        idx = filter_modeinfo_by_fps(fps, size, modes);
-      if (idx < 0)
-        idx = filter_modeinfo_by_type(DRM_MODE_TYPE_PREFERRED, size, modes);
-      if (idx < 0)
-        idx = 0;
-      cur_mode = *(modes[idx]);
-	    cur_mode_idx = idx;
-      free(modes);
-    } else {
-      auto dmcrtc = get_crtc_by_id(res, crtc_id);
-      cur_mode = dmcrtc->mode;
-      //active = (dmcrtc->buffer_id != 0);
+    auto dmc = get_connector_by_id(res, connector_id);
+    int idx = -1;
+    int size = dmc->count_modes;
+    drmModeModeInfoPtr *modes =
+        (drmModeModeInfoPtr *)calloc(size, sizeof(*modes));
+    if (!modes)
+      return false;
+    for (int j = 0; j < size; j++)
+      modes[j] = &dmc->modes[j];
+    if (find_strict_match_wh) {
+      filter_modeinfo_by_wh(img_info.vir_width, img_info.vir_height, size,
+                            modes);
+      assert(size > 0);
     }
+    if (fps > 0)
+      idx = filter_modeinfo_by_fps(fps, size, modes);
+    if (idx < 0)
+      idx = filter_modeinfo_by_type(DRM_MODE_TYPE_PREFERRED, size, modes);
+    if (idx < 0)
+      idx = 0;
+    cur_mode = *(modes[idx]);
+    free(modes);
+
     SetModeInfo(cur_mode);
   }
   LOG("conn id : %d, enc id: %d, crtc id: %d, plane id: %d, w/h: %d,%d, fps: "

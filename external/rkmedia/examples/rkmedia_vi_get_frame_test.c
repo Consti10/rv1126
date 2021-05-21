@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -61,8 +62,17 @@ static void *GetMediaBuffer(void *arg) {
     }
 
     RK_MPI_MB_ReleaseBuffer(mb);
-    if (save_cnt <= 0)
+
+    // exit when complete and error
+    if (!save_file) {
       quit = true;
+      printf("target file is null, exit!\n");
+      break;
+    } else if (save_cnt <= 0) {
+      quit = true;
+      printf("Output is completed!\n");
+      break;
+    }
   }
 
   if (save_file)
@@ -71,17 +81,43 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?:d:w:h:c:o:a:x:";
+static RK_CHAR optstr[] = "?:a::w:h:c:o:";
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"device_name", required_argument, NULL, 'd'},
+    {"width", required_argument, NULL, 'w'},
+    {"height", required_argument, NULL, 'h'},
+    {"frame_cnt", required_argument, NULL, 'c'},
+    {"output_path", required_argument, NULL, 'o'},
+    {NULL, 0, NULL, 0},
+};
+
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s -d rkispp_scale0 -w 1920 -h 1080 -c 10 -o test.yuv\n", name);
-  printf("\t-d: device node, Default: NULL\n");
-  printf("\t-w: width, Default:1920\n");
-  printf("\t-h: height, Default:1080\n");
-  printf("\t-c: frames cnt, Default:10\n");
-  printf("\t-o: output path, Default:NULL\n");
-  printf("\t-a: enable aiq api, Default:NO, Value:0,NO;1,YES.\n");
-  printf("\t-x: iqfile Path, Default:/oem/etc/iqfiles\n");
+#ifdef RKAIQ
+  printf("\t%s [-a | --aiq /oem/etc/iqfiles/] [-w | --width 1920] "
+         "[-h | --heght 1080]"
+         "[-c | --frame_cnt 10] "
+         "[-d | --device_name rkispp_scale0] "
+         "[-o | --output_path /tmp/1080p.nv12] \n",
+         name);
+  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
+         "/oem/etc/iqfiles/, "
+         "set dirpath emtpty to using path by default, without this option aiq "
+         "should run in other application\n");
+#else
+  printf("\t%s [-w | --width 1920] "
+         "[-h | --heght 1080]"
+         "[-c | --frame_cnt 10] "
+         "[-d | --device_name rkispp_scale0] "
+         "[-o | --output_path /tmp/1080p.nv12] \n",
+         name);
+#endif
+  printf("\t-w | --width: VI width, Default:1920\n");
+  printf("\t-h | --heght: VI height, Default:1080\n");
+  printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0\n");
+  printf("\t-c | --frame_cnt: record frame, Default:10\n");
+  printf("\t-o | --output_path: output path, Default:/tmp/1080p.nv12\n");
   printf("Notice: fmt always NV12\n");
 }
 
@@ -90,16 +126,23 @@ int main(int argc, char *argv[]) {
   RK_U32 u32Height = 1080;
   RK_U32 u32FrameCnt = 10;
   RK_CHAR *pDeviceName = "rkispp_scale0";
-  RK_CHAR *pOutPath = NULL;
-  RK_CHAR *pIqfilesPath = "/oem/etc/iqfiles";
-  RK_U32 u32AiqEnable = 0;
+  RK_CHAR *pOutPath = "/tmp/1080p.nv12";
+  RK_CHAR *pIqfilesPath = NULL;
   int c;
   int ret = 0;
-
-  while ((c = getopt(argc, argv, optstr)) != -1) {
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    printf("get op is %d, a is %d\n", c, 'a');
+    const char *tmp_optarg = optarg;
     switch (c) {
-    case 'd':
-      pDeviceName = optarg;
+    case 'a':
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        pIqfilesPath = (char *)tmp_optarg;
+      } else {
+        pIqfilesPath = "/oem/etc/iqfiles";
+      }
       break;
     case 'w':
       u32Width = atoi(optarg);
@@ -113,11 +156,8 @@ int main(int argc, char *argv[]) {
     case 'o':
       pOutPath = optarg;
       break;
-    case 'a':
-      u32AiqEnable = atoi(optarg);
-      break;
-    case 'x':
-      pIqfilesPath = optarg;
+    case 'd':
+      pDeviceName = optarg;
       break;
     case '?':
     default:
@@ -126,18 +166,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("\n#############################\n");
+  printf(">>>>>>>>>>>>>>> Test START <<<<<<<<<<<<<<<<<<<<<<\n");
   printf("#Device: %s\n", pDeviceName);
   printf("#Resolution: %dx%d\n", u32Width, u32Height);
   printf("#Frame Count to save: %d\n", u32FrameCnt);
   printf("#Output Path: %s\n", pOutPath);
-  if (u32AiqEnable) {
-    printf("#Enable Aiq: %s\n", u32AiqEnable ? "TRUE" : "FALSE");
-    printf("#Aiq xml path: %s\n\n", pIqfilesPath);
-  }
+  printf("#Aiq xml dirpath: %s\n\n", pIqfilesPath);
 
-  RK_MPI_SYS_Init();
-  if (u32AiqEnable) {
+  if (pIqfilesPath) {
 #ifdef RKAIQ
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     RK_BOOL fec_enable = RK_FALSE;
@@ -148,8 +184,9 @@ int main(int argc, char *argv[]) {
 #endif
   }
 
+  RK_MPI_SYS_Init();
   VI_CHN_ATTR_S vi_chn_attr;
-  vi_chn_attr.pcVideoNode = "rkispp_scale0";
+  vi_chn_attr.pcVideoNode = pDeviceName;
   vi_chn_attr.u32BufCnt = 4;
   vi_chn_attr.u32Width = u32Width;
   vi_chn_attr.u32Height = u32Height;
@@ -179,11 +216,12 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  if (u32AiqEnable)
+  if (pIqfilesPath)
     SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
 #endif
 
   printf("%s exit!\n", __func__);
+  printf(">>>>>>>>>>>>>>> Test END <<<<<<<<<<<<<<<<<<<<<<\n");
   RK_MPI_VI_DisableChn(0, 0);
 
   return 0;

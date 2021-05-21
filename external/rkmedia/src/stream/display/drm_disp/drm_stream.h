@@ -52,7 +52,6 @@ protected:
   std::vector<uint32_t> skip_plane_ids;
   bool active;
   drmModeModeInfo cur_mode;
-  int cur_mode_idx;
   uint32_t drm_fmt;
   bool find_strict_match_wh; // if set hdisplay/vdisplay, show whether found a
                              // modeinfo match

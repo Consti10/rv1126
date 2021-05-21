@@ -18,14 +18,20 @@
 #define __JPEGE_SYNTAX_H__
 
 #include "mpp_frame.h"
+#include "rk_venc_cmd.h"
 
 typedef struct JpegeSyntax_t {
     RK_U32              width;
     RK_U32              height;
     RK_U32              hor_stride;
     RK_U32              ver_stride;
+    RK_U32              mcu_w;
+    RK_U32              mcu_h;
     MppFrameFormat      format;
     MppFrameColorSpace  color;
+    MppEncRotationCfg   rotation;
+    RK_U32              offset_x;
+    RK_U32              offset_y;
 
     /* For quantization table */
     RK_U32              quality;
@@ -70,6 +76,11 @@ typedef struct JpegeSyntax_t {
     /* For comment header */
     RK_U32              comment_length;
     RK_U8               *comment_data;
+
+    /* For jpeg low delay slice encoding */
+    RK_U32              low_delay;
+    RK_U32              part_rows;
+    RK_U32              restart_ri;
 } JpegeSyntax;
 
 typedef struct JpegeFeedback_t {

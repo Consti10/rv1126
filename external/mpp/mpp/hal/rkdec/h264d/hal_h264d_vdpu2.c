@@ -24,11 +24,12 @@
 #include "rk_type.h"
 #include "mpp_err.h"
 #include "mpp_mem.h"
+#include "mpp_soc.h"
 #include "mpp_common.h"
 
 #include "hal_h264d_global.h"
 #include "hal_h264d_api.h"
-#include "hal_h264d_common.h"
+#include "hal_h264d_vdpu_com.h"
 #include "hal_h264d_vdpu2.h"
 #include "hal_h264d_vdpu2_reg.h"
 
@@ -578,8 +579,10 @@ static MPP_RET set_asic_regs(H264dHalCtx_t *p_hal, H264dVdpuRegs_t *p_regs)
             top_closer = (cur_poc < ref_poc) ? 0x1 : 0;
         }
         val = top_closer | field_flag;
-        val = mpp_buffer_get_fd(frame_buf) | (val << 10);
-        set_refer_pic_base_addr(p_regs, i, val);
+
+        if (val)
+            mpp_dev_set_reg_offset(p_hal->dev, 84 + i, val);
+        set_refer_pic_base_addr(p_regs, i, mpp_buffer_get_fd(frame_buf));
     }
     /* inter-view reference picture */
     {
@@ -600,7 +603,7 @@ static MPP_RET set_asic_regs(H264dHalCtx_t *p_hal, H264dVdpuRegs_t *p_regs)
                           SLOT_BUFFER, &frame_buf); //!< current out phy addr
     outPhyAddr = mpp_buffer_get_fd(frame_buf);
     if (pp->field_pic_flag && pp->CurrPic.AssociatedFlag) {
-        outPhyAddr |= ((pp->wFrameWidthInMbsMinus1 + 1) * 16) << 10;
+        mpp_dev_set_reg_offset(p_hal->dev, 63, ((pp->wFrameWidthInMbsMinus1 + 1) * 16));
     }
     p_regs->sw63.dec_out_st_adr = outPhyAddr; //!< outPhyAddr, pp->CurrPic.Index7Bits
     p_regs->sw110.flt_offset_cb_qp = pp->chroma_qp_index_offset;
@@ -617,7 +620,11 @@ static MPP_RET set_asic_regs(H264dHalCtx_t *p_hal, H264dVdpuRegs_t *p_regs)
                       * ((p_hal->pp->chroma_format_idc == 0) ? 256 : 384);
         dirMvOffset += (pp->field_pic_flag && pp->CurrPic.AssociatedFlag)
                        ? (picSizeInMbs * 32) : 0;
-        p_regs->sw62.dmmv_st_adr = (mpp_buffer_get_fd(frame_buf) | (dirMvOffset << 6));
+        if (dirMvOffset) {
+            RK_U32 offset = mpp_get_ioctl_version() ? dirMvOffset : dirMvOffset >> 4;
+            mpp_dev_set_reg_offset(p_hal->dev, 62, offset);
+        }
+        p_regs->sw62.dmmv_st_adr = mpp_buffer_get_fd(frame_buf);
     }
     p_regs->sw57.dmmv_wr_en = (p_long->nal_ref_idc != 0) ? 1 : 0; //!< defalut set 1
     p_regs->sw115.dlmv_method_en = pp->direct_8x8_inference_flag;
@@ -681,7 +688,6 @@ MPP_RET vdpu2_h264d_init(void *hal, MppHalCfg *cfg)
     H264dHalCtx_t  *p_hal = (H264dHalCtx_t *)hal;
     INP_CHECK(ret, NULL == hal);
 
-    p_hal->fast_mode = cfg->fast_mode;
     MEM_CHECK(ret, p_hal->priv = mpp_calloc_size(void,
                                                  sizeof(H264dVdpuPriv_t)));
     MEM_CHECK(ret, p_hal->reg_ctx = mpp_calloc_size(void, sizeof(H264dVdpuRegCtx_t)));
@@ -714,6 +720,7 @@ MPP_RET vdpu2_h264d_init(void *hal, MppHalCfg *cfg)
     mpp_slots_set_prop(p_hal->frame_slots, SLOTS_HOR_ALIGN, vdpu_hor_align);
     mpp_slots_set_prop(p_hal->frame_slots, SLOTS_VER_ALIGN, vdpu_ver_align);
 
+    (void)cfg;
 __RETURN:
     return MPP_OK;
 __FAILED:
@@ -897,15 +904,14 @@ MPP_RET vdpu2_h264d_wait(void *hal, HalTaskInfo *task)
         mpp_err_f("poll cmd failed %d\n", ret);
 
 __SKIP_HARD:
-    if (p_hal->init_cb.callBack) {
-        IOCallbackCtx m_ctx = { 0, NULL, NULL, 0 };
-        m_ctx.device_id = DEV_VDPU;
-        if (!p_regs->sw55.dec_rdy_sts) {
-            m_ctx.hard_err = 1;
-        }
+    if (p_hal->dec_cb) {
+        DecCbHalDone m_ctx;
+
         m_ctx.task = (void *)&task->dec;
         m_ctx.regs = (RK_U32 *)reg_ctx->regs;
-        p_hal->init_cb.callBack(p_hal->init_cb.opaque, &m_ctx);
+        m_ctx.hard_err = !p_regs->sw55.dec_rdy_sts;
+
+        mpp_callback(p_hal->dec_cb, DEC_PARSER_CALLBACK, &m_ctx);
     }
     memset(&p_regs->sw55, 0, sizeof(RK_U32));
     if (p_hal->fast_mode) {

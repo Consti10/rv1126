@@ -18,8 +18,12 @@
 #define __MPP_DEC_IMPL_H__
 
 #include "mpp_time.h"
+#include "hal_info.h"
 
 #include "mpp.h"
+#include "mpp_dec_cfg.h"
+#include "mpp_callback.h"
+
 #include "mpp_parser.h"
 #include "mpp_hal.h"
 
@@ -53,8 +57,27 @@ typedef struct MppDecImpl_t {
     // common resource
     MppBufSlots         frame_slots;
     MppBufSlots         packet_slots;
+    MppCbCtx            dec_cb;
+    const MppDecHwCap   *hw_info;
+    MppDev              dev;
+    HalInfo             hal_info;
+    RK_U32              info_updated;
+
     HalTaskGroup        tasks;
     HalTaskGroup        vproc_tasks;
+
+    // runtime configure set
+    MppDecCfgSet        cfg;
+
+    /* control process */
+    Mutex               *cmd_lock;
+    RK_U32              cmd_send;
+    RK_U32              cmd_recv;
+    MpiCmd              cmd;
+    void                *param;
+    MPP_RET             *cmd_ret;
+    sem_t               cmd_start;
+    sem_t               cmd_done;
 
     // status flags
     RK_U32              parser_work_count;
@@ -81,11 +104,8 @@ typedef struct MppDecImpl_t {
     sem_t               hal_reset;
 
     // work mode flags
-    RK_U32              parser_need_split;
     RK_U32              parser_fast_mode;
-    RK_U32              parser_internal_pts;
     RK_U32              disable_error;
-    RK_U32              use_preset_time_order;
     RK_U32              enable_deinterlace;
 
     // dec parser thread runtime resource context

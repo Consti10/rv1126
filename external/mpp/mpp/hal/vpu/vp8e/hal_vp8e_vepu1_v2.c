@@ -55,6 +55,7 @@ static MPP_RET vp8e_vpu_frame_start(void *hal)
         regs->sw2.val = 0x900e;
 
     regs->sw5.base_stream = hw_cfg->output_strm_base;
+    mpp_dev_set_reg_offset(ctx->dev, 5, hw_cfg->output_strm_offset);
 
     regs->sw6.base_control = hw_cfg->size_tbl_base;
     regs->sw14.nal_size_write = (hw_cfg->size_tbl_base != 0);
@@ -67,7 +68,9 @@ static MPP_RET vp8e_vpu_frame_start(void *hal)
 
     regs->sw11.base_in_lum = hw_cfg->input_lum_base;
     regs->sw12.base_in_cb = hw_cfg->input_cb_base;
+    mpp_dev_set_reg_offset(ctx->dev, 12, hw_cfg->input_cb_offset);
     regs->sw13.base_in_cr = hw_cfg->input_cr_base;
+    mpp_dev_set_reg_offset(ctx->dev, 13, hw_cfg->input_cr_offset);
 
     regs->sw14.int_timeout = 1;
     regs->sw14.int_slice_ready = hw_cfg->int_slice_ready;
@@ -160,7 +163,7 @@ static MPP_RET vp8e_vpu_frame_start(void *hal)
 
     regs->sw53.rgb_coeff_a = hw_cfg->rgb_coeff_a;
     regs->sw53.rgb_coeff_b = hw_cfg->rgb_coeff_b;
-    regs->sw54.rgb_coeff_c = hw_cfg->rgb_coeff_a;
+    regs->sw54.rgb_coeff_c = hw_cfg->rgb_coeff_c;
     regs->sw54.rgb_coeff_e = hw_cfg->rgb_coeff_e;
     regs->sw55.rgb_coeff_f = hw_cfg->rgb_coeff_f;
 
@@ -186,7 +189,9 @@ static MPP_RET vp8e_vpu_frame_start(void *hal)
     regs->sw61.roi2_bottom = hw_cfg->roi2_bottom;
 
     regs->sw58.base_partition1 = hw_cfg->partition_Base[0];
+    mpp_dev_set_reg_offset(ctx->dev, 58, hw_cfg->partition_offset[0]);
     regs->sw59.base_partition2 = hw_cfg->partition_Base[1];
+    mpp_dev_set_reg_offset(ctx->dev, 59, hw_cfg->partition_offset[1]);
     regs->sw26.base_prob_count = hw_cfg->prob_count_base;
 
     regs->sw64.mode0_penalty = hw_cfg->intra_mode_penalty[0];
@@ -275,7 +280,16 @@ static MPP_RET hal_vp8e_vepu1_init_v2(void *hal, MppEncHalCfg *cfg)
 
     ctx->cfg = cfg->cfg;
 
-    //ctx->int_cb = cfg->hal_int_cb;
+    /* update output to MppEnc */
+    cfg->type = VPU_CLIENT_VEPU1;
+    ret = mpp_dev_init(&cfg->dev, cfg->type);
+    if (ret) {
+        mpp_err_f("mpp_dev_init failed. ret: %d\n", ret);
+        return ret;
+    }
+    ctx->dev = cfg->dev;
+
+    vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_dev_init success.\n");
 
     ctx->buffers = mpp_calloc(Vp8eVpuBuf, 1);
     if (ctx->buffers == NULL) {
@@ -299,13 +313,6 @@ static MPP_RET hal_vp8e_vepu1_init_v2(void *hal, MppEncHalCfg *cfg)
     hw_cfg->input_cr_base = 0;
 
     hal_vp8e_init_qp_table(hal);
-
-
-    ret = mpp_dev_init(&ctx->dev, VPU_CLIENT_VEPU1);
-    if (ret)
-        mpp_err_f("mpp_dev_init failed. ret: %d\n", ret);
-    else
-        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_dev_init success.\n");
 
     return ret;
 }
@@ -422,9 +429,9 @@ static void vp8e_update_hw_cfg(void *hal)
     hw_cfg->diff_mv_penalty[2] = -1;
     hw_cfg->skip_penalty = -1;
     hw_cfg->golden_penalty = -1;
-    hw_cfg->split_penalty[0] = -1;
-    hw_cfg->split_penalty[1] = -1;
-    hw_cfg->split_penalty[3] = -1;
+    hw_cfg->split_penalty[0] = 0;
+    hw_cfg->split_penalty[1] = 0;
+    hw_cfg->split_penalty[3] = 0;
 
 }
 
@@ -498,9 +505,12 @@ const MppEncHalApi hal_vp8e_vepu1 = {
     .flag       = 0,
     .init       = hal_vp8e_vepu1_init_v2,
     .deinit     = hal_vp8e_vepu1_deinit_v2,
+    .prepare    = NULL,
     .get_task   = hal_vp8e_vepu1_get_task_v2,
     .gen_regs   = hal_vp8e_vepu1_gen_regs_v2,
     .start      = hal_vp8e_vepu1_start_v2,
     .wait       = hal_vp8e_vepu1_wait_v2,
+    .part_start = NULL,
+    .part_wait  = NULL,
     .ret_task   = hal_vp8e_vepu1_ret_task_v2,
 };

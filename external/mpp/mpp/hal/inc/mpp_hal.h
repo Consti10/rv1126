@@ -24,6 +24,8 @@
 
 #include "hal_task.h"
 #include "mpp_enc_cfg.h"
+#include "mpp_dec_cfg.h"
+#include "mpp_device.h"
 
 typedef enum VpuHwMode_e {
     MODE_NULL   = 0,
@@ -36,20 +38,19 @@ typedef enum VpuHwMode_e {
 
 typedef struct MppHalCfg_t {
     // input
-    MppCtxType      type;
-    MppCodingType   coding;
-    MppDeviceId     device_id;
-    MppBufSlots     frame_slots;
-    MppBufSlots     packet_slots;
-    // for encoder
-    MppEncCfgSet    *cfg;           /* encoder runtime config */
-    MppEncCfgSet    *set;           /* encoder input config */
+    MppCtxType          type;
+    MppCodingType       coding;
+    MppBufSlots         frame_slots;
+    MppBufSlots         packet_slots;
+    MppDecCfgSet        *cfg;
+    MppCbCtx            *dec_cb;
 
-    // output
-    HalTaskGroup    tasks;
-    RK_S32          task_count;
-    RK_U32          fast_mode;
-    IOInterruptCB   hal_int_cb;
+    // output from mpp_hal
+    HalTaskGroup        tasks;
+    // output from hardware module
+    const MppDecHwCap   *hw_info;
+    // codec dev
+    MppDev              dev;
 } MppHalCfg;
 
 typedef struct MppHalApi_t {

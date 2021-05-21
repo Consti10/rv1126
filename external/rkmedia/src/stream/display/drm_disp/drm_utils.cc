@@ -540,13 +540,16 @@ static int filter_modeinfo(int &size, drmModeModeInfoPtr *modes,
     return -1;
   int ret = -1;
   int j = 0;
-  for (; j < size; j++) {
+
+  for (; j < size;) {
     auto dmmi = modes[j];
     int r = f(dmmi);
-    if (r < 0)
+    if (r < 0) {
       size = remove_element<drmModeModeInfoPtr>(size, modes, dmmi);
-    else if (r > 0 && ret <= 0)
-      ret = j;
+    } else if (r > 0) {
+      ret = 0;
+      j++;
+    }
   }
   return ret;
 }

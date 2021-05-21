@@ -22,6 +22,7 @@
 #include "mpp_hal.h"
 #include "mpp_log.h"
 #include "mpp_device.h"
+#include "hal_bufs.h"
 
 #include "dxva_syntax.h"
 #include "h264d_syntax.h"
@@ -121,9 +122,13 @@ typedef struct h264d_hal_ctx_t {
     HalDecTask               *in_task;
     MppBufSlots              frame_slots;
     MppBufSlots              packet_slots;
+    MppDecCfgSet             *cfg;
     MppBufferGroup           buf_group;
+    HalBufs                  cmv_bufs;
+    RK_S32                   mv_size;
+    RK_S32                   mv_count;
 
-    IOInterruptCB            init_cb;
+    MppCbCtx                 *dec_cb;
     MppDev                   dev;
     void                     *reg_ctx;
     RK_U32                   fast_mode;

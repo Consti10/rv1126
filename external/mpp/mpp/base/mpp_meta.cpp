@@ -42,10 +42,13 @@ static MppMetaDef meta_defs[] = {
     /* extra information for tsvc */
     {   KEY_TEMPORAL_ID,        TYPE_S32,       },
     {   KEY_LONG_REF_IDX,       TYPE_S32,       },
+    {   KEY_ENC_AVERAGE_QP,     TYPE_S32,       },
 
     {   KEY_ROI_DATA,           TYPE_PTR,       },
     {   KEY_OSD_DATA,           TYPE_PTR,       },
+    {   KEY_OSD_DATA2,          TYPE_PTR,       },
     {   KEY_USER_DATA,          TYPE_PTR,       },
+    {   KEY_USER_DATAS,         TYPE_PTR,       },
     {   KEY_MV_LIST,            TYPE_PTR,       },
 
     {   KEY_ENC_MARK_LTR,       TYPE_S32,       },

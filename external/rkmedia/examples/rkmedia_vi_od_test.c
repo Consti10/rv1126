@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -37,36 +38,70 @@ void occlusion_detection_cb(EVENT_S *pstEvent) {
   }
 }
 
+static RK_CHAR optstr[] = "?:a::h";
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"help", no_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0},
+};
+
+static void print_usage(const RK_CHAR *name) {
+  printf("usage example:\n");
+#ifdef RKAIQ
+  printf("\t%s [-a | --aiq /oem/etc/iqfiles/]\n", name);
+  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
+         "/oem/etc/iqfiles/, "
+         "set dirpath empty to using path by default, without this option aiq "
+         "should run in other application\n");
+#else
+  printf("\t%s\n", name);
+#endif
+}
+
 int main(int argc, char *argv[]) {
   RK_S32 ret = 0;
   RK_S32 video_width = 1920;
   RK_S32 video_height = 1080;
   RK_S32 disp_width = 720;
   RK_S32 disp_height = 1280;
-
-  RK_MPI_SYS_Init();
-#ifdef RKAIQ
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RK_BOOL fec_enable = RK_FALSE;
-  int fps = 30;
+  int c;
   char *iq_file_dir = NULL;
-  if ((argc > 1) && !strcmp(argv[1], "-h")) {
-    printf("\n\n/Usage:./%s [--aiq iq_file_dir]\n", argv[0]);
-    printf("\t --aiq iq_file_dir : init isp\n");
-    return -1;
-  }
-  if (argc == 3) {
-    if (strcmp(argv[1], "--aiq") == 0) {
-      iq_file_dir = argv[2];
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    const char *tmp_optarg = optarg;
+    switch (c) {
+    case 'a':
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        iq_file_dir = (char *)tmp_optarg;
+      } else {
+        iq_file_dir = "/oem/etc/iqfiles";
+      }
+      break;
+    case 'h':
+      print_usage(argv[0]);
+      return 0;
+    case '?':
+    default:
+      print_usage(argv[0]);
+      return 0;
     }
   }
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
-#else
-  (void)argc;
-  (void)argv;
+
+  if (iq_file_dir) {
+#ifdef RKAIQ
+    printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+    RK_BOOL fec_enable = RK_FALSE;
+    int fps = 30;
+    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
+    SAMPLE_COMM_ISP_Run();
+    SAMPLE_COMM_ISP_SetFrameRate(fps);
 #endif
+  }
+
+  RK_MPI_SYS_Init();
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = "rkispp_scale0";
   vi_chn_attr.u32BufCnt = 4;
@@ -80,7 +115,6 @@ int main(int argc, char *argv[]) {
     printf("Create vi[1] failed! ret=%d\n", ret);
     return -1;
   }
-
   RGA_ATTR_S stRgaAttr;
   stRgaAttr.bEnBufPool = RK_TRUE;
   stRgaAttr.u16BufPoolCnt = 12;

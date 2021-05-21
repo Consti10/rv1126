@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#define MODULE_TAG "hal_jpege_vepu2_2"
+#define MODULE_TAG "hal_jpege_vepu2"
 
 #include <string.h>
 
 #include "mpp_env.h"
-#include "mpp_log.h"
 #include "mpp_common.h"
 #include "mpp_mem.h"
 #include "mpp_platform.h"
@@ -27,27 +26,20 @@
 #include "mpp_enc_hal.h"
 #include "vcodec_service.h"
 
-#include "vepu_common.h"
-
 #include "hal_jpege_debug.h"
 #include "hal_jpege_api_v2.h"
-#include "hal_jpege_hdr.h"
 #include "hal_jpege_base.h"
 
 #define VEPU_JPEGE_VEPU2_NUM_REGS   184
+#define VEPU2_REG_INPUT_Y           48
+#define VEPU2_REG_INPUT_U           49
+#define VEPU2_REG_INPUT_V           50
 
 typedef struct jpege_vepu2_reg_set_t {
     RK_U32  val[VEPU_JPEGE_VEPU2_NUM_REGS];
 } jpege_vepu2_reg_set;
 
-static const RK_U32 qp_reorder_table[64] = {
-    0,  8, 16, 24,  1,  9, 17, 25, 32, 40, 48, 56, 33, 41, 49, 57,
-    2, 10, 18, 26,  3, 11, 19, 27, 34, 42, 50, 58, 35, 43, 51, 59,
-    4, 12, 20, 28,  5, 13, 21, 29, 36, 44, 52, 60, 37, 45, 53, 61,
-    6, 14, 22, 30,  7, 15, 23, 31, 38, 46, 54, 62, 39, 47, 55, 63
-};
-
-MPP_RET hal_jpege_vepu2_init_v2(void *hal, MppEncHalCfg *cfg)
+MPP_RET hal_jpege_vepu2_init(void *hal, MppEncHalCfg *cfg)
 {
     MPP_RET ret = MPP_OK;
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
@@ -55,11 +47,14 @@ MPP_RET hal_jpege_vepu2_init_v2(void *hal, MppEncHalCfg *cfg)
     mpp_env_get_u32("hal_jpege_debug", &hal_jpege_debug, 0);
     hal_jpege_dbg_func("enter hal %p cfg %p\n", hal, cfg);
 
-    ret = mpp_dev_init(&ctx->dev, VPU_CLIENT_VEPU2);
+    /* update output to MppEnc */
+    cfg->type = VPU_CLIENT_VEPU2;
+    ret = mpp_dev_init(&cfg->dev, cfg->type);
     if (ret) {
         mpp_err_f("mpp_dev_init failed. ret: %d\n", ret);
         return ret;
     }
+    ctx->dev = cfg->dev;
 
     jpege_bits_init(&ctx->bits);
     mpp_assert(ctx->bits);
@@ -73,11 +68,17 @@ MPP_RET hal_jpege_vepu2_init_v2(void *hal, MppEncHalCfg *cfg)
         return MPP_NOK;
     }
 
+    ctx->regs_out = mpp_calloc_size(void, ctx->reg_size + EXTRA_INFO_SIZE);
+    if (NULL == ctx->regs_out) {
+        mpp_err_f("failed to malloc vepu2 regs\n");
+        return MPP_NOK;
+    }
+
     hal_jpege_dbg_func("leave hal %p\n", hal);
     return MPP_OK;
 }
 
-MPP_RET hal_jpege_vepu2_deinit_v2(void *hal)
+MPP_RET hal_jpege_vepu2_deinit(void *hal)
 {
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
 
@@ -94,11 +95,12 @@ MPP_RET hal_jpege_vepu2_deinit_v2(void *hal)
     }
 
     MPP_FREE(ctx->regs);
+    MPP_FREE(ctx->regs_out);
     hal_jpege_dbg_func("leave hal %p\n", hal);
     return MPP_OK;
 }
 
-MPP_RET hal_jpege_vepu2_get_task_v2(void *hal, HalEncTask *task)
+MPP_RET hal_jpege_vepu2_get_task(void *hal, HalEncTask *task)
 {
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
     JpegeSyntax *syntax = (JpegeSyntax *)task->syntax.data;
@@ -119,132 +121,70 @@ MPP_RET hal_jpege_vepu2_get_task_v2(void *hal, HalEncTask *task)
             task->rc_task->info.quality_max = 100 - syntax->qf_min;
         }
     }
-
     ctx->hal_start_pos = mpp_packet_get_length(task->packet);
+
+    /* prepare for part encoding */
+    ctx->mcu_y = 0;
+    ctx->mcu_h = syntax->mcu_h;
+    ctx->sw_bit = 0;
+    ctx->part_bytepos = 0;
+    ctx->part_x_fill = 0;
+    ctx->part_y_fill = 0;
+    ctx->rst_marker_idx = 0;
+    task->part_first = 1;
+    task->part_last = 0;
 
     hal_jpege_dbg_func("leave hal %p\n", hal);
 
     return MPP_OK;
 }
 
-static MPP_RET hal_jpege_vepu2_set_extra_info(RK_U32 *regs,
-                                              MppDev dev,
-                                              JpegeSyntax *syntax)
+static MPP_RET hal_jpege_vepu2_set_extra_info(MppDev dev, JpegeSyntax *syntax,
+                                              RK_U32 start_mbrow)
 {
-    MppFrameFormat fmt  = syntax->format;
-    RK_U32 hor_stride   = syntax->hor_stride;
-    RK_U32 ver_stride   = syntax->ver_stride;
+    VepuOffsetCfg cfg;
+    MppDevRegOffsetCfg trans_cfg;
 
-    switch (fmt) {
-    case MPP_FMT_YUV420SP :
-    case MPP_FMT_YUV420P : {
-        RK_U32 offset = hor_stride * ver_stride;
+    cfg.fmt = syntax->format;
+    cfg.width = syntax->width;
+    cfg.height = syntax->height;
+    cfg.hor_stride = syntax->hor_stride;
+    cfg.ver_stride = syntax->ver_stride;
+    cfg.offset_x = syntax->offset_x;
+    cfg.offset_y = syntax->offset_y + start_mbrow * 16;
 
-        if (offset < SZ_4M)
-            regs[49] += offset << 10;
-        else {
-            MppDevRegOffsetCfg trans_cfg;
+    get_vepu_offset_cfg(&cfg);
 
-            trans_cfg.reg_idx = 49;
-            trans_cfg.offset = offset;
+    if (cfg.offset_byte[0]) {
+        trans_cfg.reg_idx = VEPU2_REG_INPUT_Y;
+        trans_cfg.offset = cfg.offset_byte[0];
 
-            mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
-        }
+        mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
+    }
 
-        if (fmt == MPP_FMT_YUV420P)
-            offset = hor_stride * ver_stride * 5 / 4;
+    if (cfg.offset_byte[1]) {
+        trans_cfg.reg_idx = VEPU2_REG_INPUT_U;
+        trans_cfg.offset = cfg.offset_byte[1];
 
-        if (offset < SZ_4M)
-            regs[50] += offset << 10;
-        else {
-            MppDevRegOffsetCfg trans_cfg;
+        mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
+    }
 
-            trans_cfg.reg_idx = 50;
-            trans_cfg.offset = offset;
+    if (cfg.offset_byte[2]) {
+        trans_cfg.reg_idx = VEPU2_REG_INPUT_V;
+        trans_cfg.offset = cfg.offset_byte[2];
 
-            mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
-        }
-    } break;
-    default : {
-    } break;
+        mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
     }
 
     return MPP_OK;
 }
 
-#define QUANTIZE_TABLE_SIZE 64
-/*
- *  from RFC435 spec.
- */
-static const RK_U8 jpege_luma_quantizer[QUANTIZE_TABLE_SIZE] = {
-    16, 11, 10, 16, 24, 40, 51, 61,
-    12, 12, 14, 19, 26, 58, 60, 55,
-    14, 13, 16, 24, 40, 57, 69, 56,
-    14, 17, 22, 29, 51, 87, 80, 62,
-    18, 22, 37, 56, 68, 109, 103, 77,
-    24, 35, 55, 64, 81, 104, 113, 92,
-    49, 64, 78, 87, 103, 121, 120, 101,
-    72, 92, 95, 98, 112, 100, 103, 99
-};
-
-static const RK_U8 jpege_chroma_quantizer[QUANTIZE_TABLE_SIZE] = {
-    17, 18, 24, 47, 99, 99, 99, 99,
-    18, 21, 26, 66, 99, 99, 99, 99,
-    24, 26, 56, 99, 99, 99, 99, 99,
-    47, 66, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99
-};
-
-static MPP_RET hal_jpege_vepu2_rc(HalJpegeCtx *ctx, HalEncTask *task)
-{
-    HalJpegeRc *hal_rc = &ctx->hal_rc;
-    EncRcTaskInfo *rc_info = (EncRcTaskInfo *)&task->rc_task->info;
-
-    if (rc_info->quality_target != hal_rc->last_quality) {
-        RK_U32 i = 0;
-        RK_S32 q = 0;
-
-        hal_rc->q_factor = 100 - rc_info->quality_target;
-        hal_jpege_dbg_input("use qfactor=%d, rc_info->quality_target=%d\n", hal_rc->q_factor, rc_info->quality_target);
-
-        if (!hal_rc->qtable_y)
-            hal_rc->qtable_y = mpp_malloc(RK_U8, QUANTIZE_TABLE_SIZE);
-        if (!hal_rc->qtable_c)
-            hal_rc->qtable_c = mpp_malloc(RK_U8, QUANTIZE_TABLE_SIZE);
-        if (NULL == hal_rc->qtable_y || NULL == hal_rc->qtable_c) {
-            mpp_err_f("qtable is null, malloc err\n");
-            return MPP_ERR_MALLOC;
-        }
-
-        q = hal_rc->q_factor;
-        if (q < 50)
-            q = 5000 / q;
-        else
-            q = 200 - (q << 1);
-
-        for (i = 0; i < QUANTIZE_TABLE_SIZE; i++) {
-            RK_S16 lq = (jpege_luma_quantizer[i] * q + 50) / 100;
-            RK_S16 cq = (jpege_chroma_quantizer[i] * q + 50) / 100;
-
-            /* Limit the quantizers to 1 <= q <= 255 */
-            hal_rc->qtable_y[i] = MPP_CLIP3(1, 255, lq);
-            hal_rc->qtable_c[i] = MPP_CLIP3(1, 255, cq);
-        }
-    }
-
-    return MPP_OK;
-}
-
-
-MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
+MPP_RET hal_jpege_vepu2_gen_regs(void *hal, HalEncTask *task)
 {
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
     MppBuffer input  = task->input;
     MppBuffer output = task->output;
-    JpegeSyntax *syntax = (JpegeSyntax *)task->syntax.data;
+    JpegeSyntax *syntax = &ctx->syntax;
     RK_U32 width        = syntax->width;
     RK_U32 width_align  = MPP_ALIGN(width, 16);
     RK_U32 height       = syntax->height;
@@ -257,12 +197,25 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     RK_U8  *buf = mpp_buffer_get_ptr(output);
     size_t size = mpp_buffer_get_size(output);
     const RK_U8 *qtable[2] = {NULL};
-    RK_U32 val32;
     RK_S32 bitpos;
     RK_S32 bytepos;
     RK_U32 x_fill = 0;
+    RK_U32 y_fill = 0;
     VepuFormatCfg fmt_cfg;
+    RK_U32 rotation = 0;
 
+    hal_jpege_dbg_func("enter hal %p\n", hal);
+
+    if (syntax->rotation == MPP_ENC_ROT_90)
+        rotation = 1;
+    else if (syntax->rotation == MPP_ENC_ROT_270)
+        rotation = 2;
+    else if (syntax->rotation != MPP_ENC_ROT_0)
+        mpp_err_f("Warning: only support 90 or 270 degree rotate, request rotate %d", syntax->rotation);
+    if (rotation) {
+        MPP_SWAP(RK_U32, width, height);
+        MPP_SWAP(RK_U32, width_align, ver_stride);
+    }
     hor_stride = get_vepu_pixel_stride(&ctx->stride_cfg, width,
                                        syntax->hor_stride, fmt);
 
@@ -274,9 +227,11 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     }
 
     x_fill = (width_align - width) / 4;
+    y_fill = (ver_stride - height);
     mpp_assert(x_fill <= 3);
-
-    hal_jpege_dbg_func("enter hal %p\n", hal);
+    mpp_assert(y_fill <= 15);
+    ctx->part_x_fill = x_fill;
+    ctx->part_y_fill = y_fill;
 
     /* write header to output buffer */
     jpege_bits_setup(bits, buf, (RK_U32)size);
@@ -284,7 +239,7 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     jpege_seek_bits(bits, length << 3);
     /* NOTE: write header will update qtable */
     if (ctx->cfg->rc.rc_mode != MPP_ENC_RC_MODE_FIXQP) {
-        hal_jpege_vepu2_rc(ctx, task);
+        hal_jpege_vepu_rc(ctx, task);
         qtable[0] = ctx->hal_rc.qtable_y;
         qtable[1] = ctx->hal_rc.qtable_c;
     } else {
@@ -295,42 +250,19 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
 
     memset(regs, 0, sizeof(RK_U32) * VEPU_JPEGE_VEPU2_NUM_REGS);
     // input address setup
-    regs[48] = mpp_buffer_get_fd(input);
-    regs[49] = mpp_buffer_get_fd(input);
-    regs[50] = regs[49];
-    hal_jpege_vepu2_set_extra_info(regs, ctx->dev, syntax);
+    regs[VEPU2_REG_INPUT_Y] = mpp_buffer_get_fd(input);
+    regs[VEPU2_REG_INPUT_U] = regs[VEPU2_REG_INPUT_Y];
+    regs[VEPU2_REG_INPUT_V] = regs[VEPU2_REG_INPUT_Y];
 
     // output address setup
     bitpos = jpege_bits_get_bitpos(bits);
     bytepos = (bitpos + 7) >> 3;
-    {
-        RK_S32 left_byte = bytepos & 0x7;
-        RK_U8 *tmp = buf + (bytepos & (~0x7));
+    ctx->base = buf;
+    ctx->size = size;
+    ctx->sw_bit = bitpos;
+    ctx->part_bytepos = bytepos;
 
-        // clear the rest bytes in 64bit
-        if (left_byte) {
-            RK_U32 i;
-
-            for (i = left_byte; i < 8; i++)
-                tmp[i] = 0;
-        }
-
-        val32 = (tmp[0] << 24) |
-                (tmp[1] << 16) |
-                (tmp[2] <<  8) |
-                (tmp[3] <<  0);
-
-        regs[51] = val32;
-
-        if (left_byte > 4) {
-            val32 = (tmp[4] << 24) |
-                    (tmp[5] << 16) |
-                    (tmp[6] <<  8);
-        } else
-            val32 = 0;
-
-        regs[52] = val32;
-    }
+    get_msb_lsb_at_pos(&regs[51], &regs[52], buf, bytepos);
 
     regs[53] = size - bytepos;
 
@@ -339,10 +271,12 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
 
     regs[60] = (((bytepos & 7) * 8) << 16) |
                (x_fill << 4) |
-               (ver_stride - height);
+               (y_fill);
     regs[61] = hor_stride;
 
-    regs[77] = mpp_buffer_get_fd(output) + (bytepos << 10);
+    regs[77] = mpp_buffer_get_fd(output);
+    if (bytepos)
+        mpp_dev_set_reg_offset(ctx->dev, 77, bytepos);
 
     /* 95 - 97 color conversion parameter */
     {
@@ -407,7 +341,8 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
                 1;          /* encoder start */
 
     if (!get_vepu_fmt(&fmt_cfg, fmt)) {
-        regs[74] = fmt_cfg.format << 4;
+        regs[74] = (fmt_cfg.format << 4) |
+                   (rotation << 2);
         regs[98] = (fmt_cfg.b_mask & 0x1f) << 16 |
                    (fmt_cfg.g_mask & 0x1f) << 8  |
                    (fmt_cfg.r_mask & 0x1f);
@@ -416,9 +351,19 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
                     (fmt_cfg.swap_8_in & 1) << 31;
     }
 
+    regs[107] = ((syntax->part_rows & 0xff) << 16) |
+                jpege_restart_marker[ctx->rst_marker_idx & 7];
+
     /* encoder interrupt */
     regs[109] = 1 << 12 |   /* clock gating */
                 1 << 10;    /* enable timeout interrupt */
+
+    if (syntax->low_delay) {
+        /* slice encode end by RST */
+        regs[107] |= (1 << 24);
+        /* slice interrupt enable */
+        regs[109] |= (1 << 16);
+    }
 
     /* 0 ~ 31 quantization tables */
     {
@@ -444,12 +389,14 @@ MPP_RET hal_jpege_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     return MPP_OK;
 }
 
-MPP_RET hal_jpege_vepu2_start_v2(void *hal, HalEncTask *task)
+MPP_RET hal_jpege_vepu2_start(void *hal, HalEncTask *task)
 {
     MPP_RET ret = MPP_OK;
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
 
     hal_jpege_dbg_func("enter hal %p\n", hal);
+
+    hal_jpege_vepu2_set_extra_info(ctx->dev, &ctx->syntax, 0);
 
     do {
         MppDevRegWrCfg wr_cfg;
@@ -467,7 +414,7 @@ MPP_RET hal_jpege_vepu2_start_v2(void *hal, HalEncTask *task)
         }
 
         rd_cfg.reg = ctx->regs;
-        rd_cfg.size = reg_size;;
+        rd_cfg.size = reg_size;
         rd_cfg.offset = 0;
 
         ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
@@ -488,7 +435,7 @@ MPP_RET hal_jpege_vepu2_start_v2(void *hal, HalEncTask *task)
     return ret;
 }
 
-MPP_RET hal_jpege_vepu2_wait_v2(void *hal, HalEncTask *task)
+MPP_RET hal_jpege_vepu2_wait(void *hal, HalEncTask *task)
 {
     MPP_RET ret = MPP_OK;
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
@@ -496,8 +443,8 @@ MPP_RET hal_jpege_vepu2_wait_v2(void *hal, HalEncTask *task)
     RK_U32 *regs = ctx->regs;
     JpegeFeedback *feedback = &ctx->feedback;
     RK_U32 val;
-    RK_U32 sw_bit;
-    RK_U32 hw_bit;
+    RK_U32 sw_bit = 0;
+    RK_U32 hw_bit = 0;
 
     hal_jpege_dbg_func("enter hal %p\n", hal);
 
@@ -519,6 +466,7 @@ MPP_RET hal_jpege_vepu2_wait_v2(void *hal, HalEncTask *task)
     feedback->stream_length = ((sw_bit / 8) & (~0x7)) + hw_bit / 8;
     task->length = feedback->stream_length;
     task->hw_length = task->length - ctx->hal_start_pos;
+
     hal_jpege_dbg_output("stream bit: sw %d hw %d total %d hw_length %d\n",
                          sw_bit, hw_bit, feedback->stream_length, task->hw_length);
 
@@ -526,7 +474,141 @@ MPP_RET hal_jpege_vepu2_wait_v2(void *hal, HalEncTask *task)
     return ret;
 }
 
-MPP_RET hal_jpege_vepu2_ret_task_v2(void *hal, HalEncTask *task)
+MPP_RET hal_jpege_vepu2_part_start(void *hal, HalEncTask *task)
+{
+    MPP_RET ret = MPP_OK;
+    HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
+    JpegeSyntax *syntax = (JpegeSyntax *)task->syntax.data;
+    RK_U32 mcu_w = syntax->mcu_w;
+    RK_U32 mcu_h = syntax->mcu_h;
+    RK_U32 mcu_y = ctx->mcu_y;
+    RK_U32 part_mcu_h = syntax->part_rows;
+    RK_U32 *regs = (RK_U32 *)ctx->regs;
+    RK_U32 part_enc_h;
+    RK_U32 part_enc_mcu_h;
+    RK_U32 part_y_fill;
+    RK_U32 part_not_end;
+
+    hal_jpege_dbg_func("enter part start %p\n", hal);
+
+    /* Fix register for each part encoding */
+    task->part_first = !mcu_y;
+    if (mcu_y + part_mcu_h < mcu_h) {
+        part_enc_h = part_mcu_h * 16;
+        part_enc_mcu_h = part_mcu_h;
+        part_y_fill = 0;
+        part_not_end = 1;
+        task->part_last = 0;
+    } else {
+        part_enc_h = syntax->height - mcu_y * 16;
+        part_enc_mcu_h = MPP_ALIGN(part_enc_h, 16) / 16;;
+        part_y_fill = ctx->part_y_fill;
+        part_not_end = 0;
+        task->part_last = 1;
+    }
+
+    hal_jpege_dbg_detail("part first %d last %d\n", task->part_first, task->part_last);
+
+    get_msb_lsb_at_pos(&regs[51], &regs[52], ctx->base, ctx->part_bytepos);
+
+    regs[53] = ctx->size - ctx->part_bytepos;
+
+    regs[60] = (((ctx->part_bytepos & 7) * 8) << 16) |
+               (ctx->part_x_fill << 4) |
+               (part_y_fill);
+
+    regs[77] = mpp_buffer_get_fd(task->output);
+    if (ctx->part_bytepos)
+        mpp_dev_set_reg_offset(ctx->dev, 77, ctx->part_bytepos);
+
+    regs[103] = mcu_w << 8  |
+                (part_enc_mcu_h) << 20 |
+                (1 << 6) |  /* intra coding  */
+                (2 << 4) |  /* format jpeg   */
+                1;          /* encoder start */
+
+    regs[107] = part_not_end << 24 | jpege_restart_marker[ctx->rst_marker_idx & 7];
+    ctx->rst_marker_idx++;
+
+    hal_jpege_vepu2_set_extra_info(ctx->dev, syntax, mcu_y);
+    ctx->mcu_y += part_enc_mcu_h;
+
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = ctx->reg_size;
+
+        wr_cfg.reg = ctx->regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = ctx->regs_out;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
+
+    hal_jpege_dbg_func("leave part start %p\n", hal);
+    (void)task;
+    return ret;
+}
+
+MPP_RET hal_jpege_vepu2_part_wait(void *hal, HalEncTask *task)
+{
+    MPP_RET ret = MPP_OK;
+    HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
+    RK_U32 *regs = ctx->regs_out;
+    JpegeFeedback *feedback = &ctx->feedback;
+    RK_U32 hw_bit = 0;
+
+    hal_jpege_dbg_func("enter part wait %p\n", hal);
+
+    if (ctx->dev) {
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_POLL, NULL);
+        if (ret)
+            mpp_err_f("poll cmd failed %d\n", ret);
+    }
+
+    hal_jpege_dbg_detail("hw_status %08x\n", regs[109]);
+
+    hw_bit = regs[53];
+
+    hal_jpege_dbg_detail("byte pos %d -> %d\n", ctx->part_bytepos,
+                         (ctx->part_bytepos & (~7)) + (hw_bit / 8));
+    ctx->part_bytepos = (ctx->part_bytepos & (~7)) + (hw_bit / 8);
+
+    feedback->stream_length = ctx->part_bytepos;
+    task->length = ctx->part_bytepos;
+    task->hw_length = task->length - ctx->hal_start_pos;
+
+    hal_jpege_dbg_detail("stream_length %d, hw_byte %d",
+                         feedback->stream_length, hw_bit / 8);
+
+    hal_jpege_dbg_output("stream bit: sw %d hw %d total %d hw_length %d\n",
+                         ctx->sw_bit, hw_bit, feedback->stream_length, task->hw_length);
+
+    hal_jpege_dbg_func("leave part wait %p\n", hal);
+    return ret;
+}
+
+MPP_RET hal_jpege_vepu2_ret_task(void *hal, HalEncTask *task)
 {
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
 
@@ -543,11 +625,14 @@ const MppEncHalApi hal_jpege_vepu2 = {
     .coding     = MPP_VIDEO_CodingMJPEG,
     .ctx_size   = sizeof(HalJpegeCtx),
     .flag       = 0,
-    .init       = hal_jpege_vepu2_init_v2,
-    .deinit     = hal_jpege_vepu2_deinit_v2,
-    .get_task   = hal_jpege_vepu2_get_task_v2,
-    .gen_regs   = hal_jpege_vepu2_gen_regs_v2,
-    .start      = hal_jpege_vepu2_start_v2,
-    .wait       = hal_jpege_vepu2_wait_v2,
-    .ret_task   = hal_jpege_vepu2_ret_task_v2,
+    .init       = hal_jpege_vepu2_init,
+    .deinit     = hal_jpege_vepu2_deinit,
+    .prepare    = NULL,
+    .get_task   = hal_jpege_vepu2_get_task,
+    .gen_regs   = hal_jpege_vepu2_gen_regs,
+    .start      = hal_jpege_vepu2_start,
+    .wait       = hal_jpege_vepu2_wait,
+    .part_start = hal_jpege_vepu2_part_start,
+    .part_wait  = hal_jpege_vepu2_part_wait,
+    .ret_task   = hal_jpege_vepu2_ret_task,
 };

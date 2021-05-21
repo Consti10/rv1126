@@ -881,7 +881,7 @@ typedef struct h264d_input_ctx_t {
     struct h264d_cur_ctx_t     *p_Cur;   //!< current parameters, use in read nalu
     struct h264d_video_ctx_t   *p_Vid;   //!< parameters for video decoder
     enum   mpp_decmtd_type      dec_mtd;
-    ParserCfg                   init;
+
     //!< input data
     RK_U8  *in_buf;
     size_t in_length;
@@ -1007,6 +1007,7 @@ typedef struct h264d_video_ctx_t {
     RK_S32     active_sps_id[MAX_NUM_DPB_LAYERS];
     RK_U32     PicWidthInMbs;
     RK_U32     FrameHeightInMbs;
+    RK_S32     frame_mbs_only_flag;
     RK_S32     yuv_format;
     RK_U32     bit_depth_chroma;
     RK_U32     bit_depth_luma;
@@ -1125,6 +1126,7 @@ typedef struct h264_dec_ctx_t {
     //!< add
     MppBufSlots                frame_slots;   //!< corresponding to dpb_mark
     MppBufSlots                packet_slots;
+    MppDecCfgSet              *cfg;
 
     MppPacket                  task_pkt;
 
@@ -1132,7 +1134,6 @@ typedef struct h264_dec_ctx_t {
     RK_U32                     task_eos;
     HalDecTask                *in_task;
     RK_S32                     last_frame_slot_idx;
-    RK_U32                     disable_error;
     RK_U32                     immediate_out;
     struct h264_err_ctx_t      errctx;
 } H264_DecCtx_t;

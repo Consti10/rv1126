@@ -50,6 +50,7 @@
 #define MPP_DEC_NOTIFY_TASK_HND_VALID       (0x00000100)
 #define MPP_DEC_NOTIFY_TASK_PREV_DONE       (0x00000200)
 #define MPP_DEC_NOTIFY_BUFFER_MATCH         (0x00000400)
+#define MPP_DEC_CONTROL                     (0x00010000)
 #define MPP_DEC_RESET                       (MPP_RESET)
 
 /* mpp enc event flags */
@@ -138,9 +139,24 @@ public:
     /*
      * Mpp task queue for advance task mode
      */
-    MppPort         mInputPort;
-    MppPort         mOutputPort;
-
+    /*
+     * Task data flow:
+     *                  |
+     *     user         |          mpp
+     *           mInputTaskQueue
+     * mUsrInPort  ->   |   -> mMppInPort
+     *                  |          |
+     *                  |          v
+     *                  |       process
+     *                  |          |
+     *                  |          v
+     * mUsrOutPort <-   |   <- mMppOutPort
+     *           mOutputTaskQueue
+     */
+    MppPort         mUsrInPort;
+    MppPort         mUsrOutPort;
+    MppPort         mMppInPort;
+    MppPort         mMppOutPort;
     MppTaskQueue    mInputTaskQueue;
     MppTaskQueue    mOutputTaskQueue;
 
@@ -164,8 +180,10 @@ private:
     RK_U32          mMultiFrame;
 
     RK_U32          mStatus;
+    RK_S32          mDecResTaskCnt;
 
     /* decoder paramter before init */
+    MppDecCfgSet    mDecInitcfg;
     RK_U32          mParserFastMode;
     RK_U32          mParserNeedSplit;
     RK_U32          mParserInternalPts;     /* for MPEG2/MPEG4 */

@@ -80,9 +80,10 @@ MPP_RET hal_m2vd_vdpu2_init(void *hal, MppHalCfg *cfg)
 
     //configure
     p->packet_slots = cfg->packet_slots;
-    p->frame_slots = cfg->frame_slots;
-    p->int_cb = cfg->hal_int_cb;
-    p->regs = (void*)reg;
+    p->frame_slots  = cfg->frame_slots;
+    p->dec_cb       = cfg->dec_cb;
+    p->regs         = (void*)reg;
+    cfg->dev        = p->dev;
 
     m2vh_dbg_func("leave\n");
 
@@ -256,7 +257,9 @@ MPP_RET hal_m2vd_vdpu2_gen_regs(void *hal, HalTaskInfo *task)
 
         mpp_buf_slot_get_prop(ctx->packet_slots, task->dec.input, SLOT_BUFFER, &streambuf);
         p_regs->sw64.VLC_base = mpp_buffer_get_fd(streambuf);
-        p_regs->sw64.VLC_base |= (dx->bitstream_offset << 10);
+        if (dx->bitstream_offset) {
+            mpp_dev_set_reg_offset(ctx->dev, 64, dx->bitstream_offset);
+        }
 
         mpp_buf_slot_get_prop(ctx->frame_slots, dx->CurrPic.Index7Bits, SLOT_BUFFER, &framebuf);
 
@@ -265,7 +268,8 @@ MPP_RET hal_m2vd_vdpu2_gen_regs(void *hal, HalTaskInfo *task)
             (dx->pic_code_ext.picture_structure == M2VD_PIC_STRUCT_FRAME)) {
             p_regs->sw63.cur_pic_base = mpp_buffer_get_fd(framebuf); //just index need map
         } else {
-            p_regs->sw63.cur_pic_base = mpp_buffer_get_fd(framebuf) | (MPP_ALIGN(dx->seq.decode_width, 16) << 10);
+            p_regs->sw63.cur_pic_base = mpp_buffer_get_fd(framebuf);
+            mpp_dev_set_reg_offset(ctx->dev, 63, MPP_ALIGN(dx->seq.decode_width, 16));
         }
 
         //ref & qtable config
@@ -382,8 +386,8 @@ MPP_RET hal_m2vd_vdpu2_wait(void *hal, HalTaskInfo *task)
         fflush(ctx->fp_reg_out);
     }
     if (reg_out->sw55.dec_error_int | reg_out->sw55.dec_buffer_int) {
-        if (ctx->int_cb.callBack)
-            ctx->int_cb.callBack(ctx->int_cb.opaque, NULL);
+        if (ctx->dec_cb)
+            mpp_callback(ctx->dec_cb, DEC_PARSER_CALLBACK, NULL);
     }
 
     if (M2VH_DBG_IRQ & m2vh_debug)

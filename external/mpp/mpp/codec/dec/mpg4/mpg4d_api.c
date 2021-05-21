@@ -89,9 +89,13 @@ static MPP_RET mpg4d_init(void *dec, ParserCfg *cfg)
     p = (Mpg4dCtx *)dec;
     p->frame_slots  = cfg->frame_slots;
     p->packet_slots = cfg->packet_slots;
-    p->task_count   = cfg->task_count = 2;
+    p->task_count   = 2;
+#ifdef __ANDROID__
     p->need_split   = 1;//cfg->need_split;
-    p->internal_pts = cfg->internal_pts;
+#else
+    p->need_split   = cfg->cfg->base.split_parse;
+#endif
+    p->internal_pts = cfg->cfg->base.internal_pts;
     p->stream       = stream;
     p->stream_size  = stream_size;
     p->task_pkt     = task_pkt;
@@ -310,7 +314,7 @@ static MPP_RET mpg4d_parse(void *dec, HalDecTask *task)
 static MPP_RET mpg4d_callback(void *dec, void *err_info)
 {
     Mpg4dCtx *p_Dec = (Mpg4dCtx *)dec;
-    IOCallbackCtx *ctx = (IOCallbackCtx *)err_info;
+    DecCbHalDone *ctx = (DecCbHalDone *)err_info;
 
     if (NULL == dec || NULL == err_info) {
         mpp_err_f("found NULL input dec %p err_info %p\n", dec, err_info);

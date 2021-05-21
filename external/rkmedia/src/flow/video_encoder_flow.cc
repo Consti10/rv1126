@@ -124,14 +124,10 @@ bool encode(Flow *f, MediaBufferVector &input_vector) {
   }
 #endif //RK_MOVE_DETECTION
 
-  LOG("Timestamp in: %d",(int)src->GetUSTimeStamp());
-
   if (0 != enc->Process(src, dst, extra_dst)) {
     LOG("encoder failed\n");
     return false;
   }
-
-  LOG("Timestamp out: %d",(int)dst->GetUSTimeStamp());
 
   bool ret = true;
   // when output fps less len input fps, enc->Proccess() may

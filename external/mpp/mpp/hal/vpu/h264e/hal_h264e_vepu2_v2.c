@@ -109,11 +109,15 @@ static MPP_RET hal_h264e_vepu2_init_v2(void *hal, MppEncHalCfg *cfg)
 
     p->cfg = cfg->cfg;
 
-    ret = mpp_dev_init(&p->dev, VPU_CLIENT_VEPU2);
+    /* update output to MppEnc */
+    cfg->type = VPU_CLIENT_VEPU2;
+
+    ret = mpp_dev_init(&cfg->dev, cfg->type);
     if (ret) {
         mpp_err_f("mpp_dev_init failed ret: %d\n", ret);
         goto DONE;
     }
+    p->dev = cfg->dev;
 
     ret = h264e_vepu_buf_init(&p->hw_bufs);
     if (ret) {
@@ -167,9 +171,6 @@ static RK_U32 update_vepu2_syntax(HalH264eVepu2Ctx *ctx, MppSyntax *syntax)
             hal_h264e_dbg_detail("update frames");
             ctx->frms = desc->p;
         } break;
-        case H264E_SYN_RC : {
-            hal_h264e_dbg_detail("update rc");
-        } break;
         case H264E_SYN_PREFIX : {
             hal_h264e_dbg_detail("update prefix nal");
             ctx->prefix = desc->p;
@@ -216,12 +217,11 @@ static MPP_RET hal_h264e_vepu2_get_task_v2(void *hal, HalEncTask *task)
 
     MppBuffer recn = h264e_vepu_buf_get_frame_buffer(hw_bufs, frms->curr_idx);
     MppBuffer refr = h264e_vepu_buf_get_frame_buffer(hw_bufs, frms->refr_idx);
-    size_t yuv_size = hw_bufs->yuv_size;
 
     hw_addr->recn[0] = mpp_buffer_get_fd(recn);
     hw_addr->refr[0] = mpp_buffer_get_fd(refr);
-    hw_addr->recn[1] = hw_addr->recn[0] + (yuv_size << 10);
-    hw_addr->refr[1] = hw_addr->refr[0] + (yuv_size << 10);
+    hw_addr->recn[1] = hw_addr->recn[0];
+    hw_addr->refr[1] = hw_addr->refr[0];
 
     h264e_vepu_stream_amend_config(&ctx->amend, task->packet, ctx->cfg,
                                    ctx->slice, ctx->prefix);
@@ -231,7 +231,7 @@ static MPP_RET hal_h264e_vepu2_get_task_v2(void *hal, HalEncTask *task)
     return MPP_OK;
 }
 
-static RK_S32 setup_output_packet(RK_U32 *reg, MppBuffer buf, RK_U32 offset)
+static RK_S32 setup_output_packet(HalH264eVepu2Ctx *ctx, RK_U32 *reg, MppBuffer buf, RK_U32 offset)
 {
     RK_U32 offset8 = offset & (~0x7);
     RK_S32 fd = mpp_buffer_get_fd(buf);
@@ -247,7 +247,8 @@ static RK_S32 setup_output_packet(RK_U32 *reg, MppBuffer buf, RK_U32 offset)
     }
 
     hal_h264e_dbg_detail("offset %d offset8 %d\n", offset, offset8);
-    H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_OUTPUT_STREAM, fd + (offset8 << 10));
+    H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_OUTPUT_STREAM, fd);
+    mpp_dev_set_reg_offset(ctx->dev, VEPU_REG_ADDR_OUTPUT_STREAM >> 2, offset8);
 
     /* output buffer size is 64 bit address then 8 multiple size */
     limit = mpp_buffer_get_size(buf);
@@ -298,7 +299,8 @@ static MPP_RET hal_h264e_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     h264e_vepu_slice_split_cfg(ctx->slice, &ctx->hw_mbrc, task->rc_task, ctx->cfg);
 
     /* setup output address with offset */
-    first_free_bit = setup_output_packet(reg, task->output, offset);
+    first_free_bit = setup_output_packet(ctx, reg, task->output, offset);
+
     /* set extra byte for header */
     hw_mbrc->hdr_strm_size = offset;
     hw_mbrc->hdr_free_size = first_free_bit / 8;
@@ -533,7 +535,9 @@ static MPP_RET hal_h264e_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
     /* set buffers addr */
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_IN_LUMA, hw_addr->orig[0]);
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_IN_CB, hw_addr->orig[1]);
+    mpp_dev_set_reg_offset(ctx->dev, VEPU_REG_ADDR_IN_CB >> 2, hw_prep->offset_cb);
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_IN_CR, hw_addr->orig[2]);
+    mpp_dev_set_reg_offset(ctx->dev, VEPU_REG_ADDR_IN_CR >> 2, hw_prep->offset_cr);
 
     MppBuffer nal_size_table = h264e_vepu_buf_get_nal_size_table(hw_bufs);
     RK_S32 nal_size_table_fd = nal_size_table ? mpp_buffer_get_fd(nal_size_table) : 0;
@@ -542,8 +546,10 @@ static MPP_RET hal_h264e_vepu2_gen_regs_v2(void *hal, HalEncTask *task)
 
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_REC_LUMA,   hw_addr->recn[0]);
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_REC_CHROMA, hw_addr->recn[1]);
+    mpp_dev_set_reg_offset(ctx->dev, VEPU_REG_ADDR_REC_CHROMA >> 2, hw_bufs->yuv_size);
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_REF_LUMA,   hw_addr->refr[0]);
     H264E_HAL_SET_REG(reg, VEPU_REG_ADDR_REF_CHROMA, hw_addr->refr[1]);
+    mpp_dev_set_reg_offset(ctx->dev, VEPU_REG_ADDR_REF_CHROMA >> 2, hw_bufs->yuv_size);
 
     /* set important encode mode info */
     val = VEPU_REG_MB_HEIGHT(mb_h)
@@ -706,9 +712,12 @@ const MppEncHalApi hal_h264e_vepu2 = {
     .flag       = 0,
     .init       = hal_h264e_vepu2_init_v2,
     .deinit     = hal_h264e_vepu2_deinit_v2,
+    .prepare    = NULL,
     .get_task   = hal_h264e_vepu2_get_task_v2,
     .gen_regs   = hal_h264e_vepu2_gen_regs_v2,
     .start      = hal_h264e_vepu2_start_v2,
     .wait       = hal_h264e_vepu2_wait_v2,
+    .part_start = NULL,
+    .part_wait  = NULL,
     .ret_task   = hal_h264e_vepu2_ret_task_v2,
 };

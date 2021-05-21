@@ -117,8 +117,9 @@ static void vdpu2_mpg4d_setup_regs_by_syntax(hal_mpg4_ctx *ctx, MppSyntax syntax
         RK_U32 start_bit_offset = stream_used & 0x3F;
         RK_U32 left_bytes = stream_length - consumed_bytes_align;
 
-        val += (consumed_bytes_align << 10);
         regs->reg64_input_stream_base = val;
+        if (consumed_bytes_align)
+            mpp_dev_set_reg_offset(ctx->dev, 64, consumed_bytes_align);
         regs->reg122.sw_stream_start_word = start_bit_offset;
         regs->reg51_stream_info.sw_stream_len = left_bytes;
     }
@@ -262,11 +263,12 @@ MPP_RET vdpu2_mpg4d_init(void *hal, MppHalCfg *cfg)
 
     ctx->frm_slots  = cfg->frame_slots;
     ctx->pkt_slots  = cfg->packet_slots;
-    ctx->int_cb     = cfg->hal_int_cb;
+    ctx->dec_cb     = cfg->dec_cb;
     ctx->group      = group;
     ctx->mv_buf     = mv_buf;
     ctx->qp_table   = qp_table;
     ctx->regs       = regs;
+    cfg->dev        = ctx->dev;
 
     mpp_env_get_u32("hal_mpg4d_debug", &hal_mpg4d_debug, 0);
 
@@ -462,17 +464,16 @@ MPP_RET vdpu2_mpg4d_wait(void *hal, HalTaskInfo *task)
         }
     }
 
-    if (ctx->int_cb.callBack) {
-        IOCallbackCtx m_ctx = { 0 };
-        m_ctx.device_id = DEV_VDPU;
+    if (ctx->dec_cb) {
+        DecCbHalDone m_ctx = { 0 };
 
-        if (!regs->reg55_Interrupt.sw_dec_rdy_int) {
+        if (!regs->reg55_Interrupt.sw_dec_rdy_int)
             m_ctx.hard_err = 1;
-        }
 
         m_ctx.task = (void *)&task->dec;
         m_ctx.regs = (RK_U32 *)ctx->regs;
-        ctx->int_cb.callBack(ctx->int_cb.opaque, &m_ctx);
+
+        mpp_callback(ctx->dec_cb, DEC_PARSER_CALLBACK, &m_ctx);
     }
 
     (void)task;

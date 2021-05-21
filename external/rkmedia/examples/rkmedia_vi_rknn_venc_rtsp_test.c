@@ -28,7 +28,8 @@
 // SSD
 #define BOX_PRIORS_TXT_PATH "/oem/usr/share/rknn_model/box_priors.txt"
 #define LABEL_NALE_TXT_PATH "/oem/usr/share/rknn_model/coco_labels_list.txt"
-#define MODEL_PATH "/oem/usr/share/rknn_model/ssd_inception_v2_rv1109_rv1126.rknn"
+#define MODEL_PATH                                                             \
+  "/oem/usr/share/rknn_model/ssd_inception_v2_rv1109_rv1126.rknn"
 
 #define OBJ_NAME_MAX_SIZE 16
 #define OBJ_NUMB_MAX_SIZE 64
@@ -996,7 +997,7 @@ static void SAMPLE_COMMON_VI_Start(struct Session *session,
                                    VI_CHN_WORK_MODE mode) {
   VI_CHN_ATTR_S vi_chn_attr;
 
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = session->u32Width;
   vi_chn_attr.u32Height = session->u32Height;
   vi_chn_attr.enWorkMode = mode;

@@ -32,6 +32,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -40,6 +41,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -48,6 +50,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -56,6 +59,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -64,14 +68,16 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_YUV420SP_VU   */
-        .format     = VEPU541_FMT_NONE,
+        .format     = VEPU541_FMT_YUV420SP,
         .alpha_swap = 0,
-        .rbuv_swap  = 0,
+        .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -80,6 +86,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -88,6 +95,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -96,6 +104,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -104,6 +113,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -112,6 +122,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -120,6 +131,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -128,6 +140,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -136,6 +149,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -144,6 +158,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -152,6 +167,7 @@ static VepuFmtCfg vepu541_yuv_cfg[MPP_FMT_YUV_BUTT] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -163,6 +179,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 1,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -171,6 +188,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 1,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -179,6 +197,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -187,6 +206,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -195,6 +215,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -203,22 +224,25 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_RGB888 */
         .format     = VEPU541_FMT_BGR888,
         .alpha_swap = 0,
-        .rbuv_swap  = 1,
+        .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_BGR888 */
         .format     = VEPU541_FMT_BGR888,
         .alpha_swap = 0,
-        .rbuv_swap  = 0,
+        .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -227,6 +251,7 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
@@ -235,37 +260,42 @@ static VepuFmtCfg vepu541_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {
         .alpha_swap = 0,
         .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_ARGB8888 */
         .format     = VEPU541_FMT_BGRA8888,
-        .alpha_swap = 0,
-        .rbuv_swap  = 0,
+        .alpha_swap = 1,
+        .rbuv_swap  = 1,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_ABGR8888 */
         .format     = VEPU541_FMT_BGRA8888,
-        .alpha_swap = 0,
-        .rbuv_swap  = 1,
+        .alpha_swap = 1,
+        .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_BGRA8888 */
         .format     = VEPU541_FMT_BGRA8888,
-        .alpha_swap = 1,
-        .rbuv_swap  = 1,
+        .alpha_swap = 0,
+        .rbuv_swap  = 0,
         .src_range  = 0,
+        .src_endian = 0,
         .weight     = zeros,
         .offset     = zeros,
     },
     {   /* MPP_FMT_RGBA8888 */
         .format     = VEPU541_FMT_BGRA8888,
-        .alpha_swap = 1,
-        .rbuv_swap  = 0,
+        .alpha_swap = 0,
+        .rbuv_swap  = 1,
+        .src_endian = 0,
         .src_range  = 0,
         .weight     = zeros,
         .offset     = zeros,
@@ -413,8 +443,14 @@ DONE:
     return ret;
 }
 
-//TODO: open interface later
+/*
+ * Invert color threshold is for the absolute difference between background
+ * and foregroud color.
+ * If background color and foregroud color are close enough then trigger the
+ * invert color process.
+ */
 #define ENC_DEFAULT_OSD_INV_THR         15
+
 #define VEPU541_OSD_ADDR_IDX_BASE       124
 #define VEPU541_OSD_CFG_OFFSET          0x01C0
 #define VEPU541_OSD_PLT_OFFSET          0x0400
@@ -492,12 +528,56 @@ typedef struct Vepu541OsdReg_t {
     RK_U32  osd_addr[8];
 } Vepu541OsdReg;
 
+#define SET_OSD_INV_THR(index, reg, region)\
+    if(region[index].inverse)   \
+        reg.osd_ithd_r##index = ENC_DEFAULT_OSD_INV_THR;
+
+static MPP_RET copy2osd2(MppEncOSDData2* dst, MppEncOSDData *src1, MppEncOSDData2 *src2)
+{
+    MPP_RET ret = MPP_OK;
+    RK_U32 i = 0;
+
+    if (src1) {
+        dst->num_region = src1->num_region;
+        for (i = 0; i < src1->num_region; i++) {
+            dst->region[i].enable       = src1->region[i].enable;
+            dst->region[i].inverse      = src1->region[i].inverse;
+            dst->region[i].start_mb_x   = src1->region[i].start_mb_x;
+            dst->region[i].start_mb_y   = src1->region[i].start_mb_y;
+            dst->region[i].num_mb_x     = src1->region[i].num_mb_x;
+            dst->region[i].num_mb_y     = src1->region[i].num_mb_y;
+            dst->region[i].buf_offset   = src1->region[i].buf_offset;
+            dst->region[i].buf          = src1->buf;
+        }
+        ret = MPP_OK;
+    } else if (src2) {
+        memcpy(dst, src2, sizeof(MppEncOSDData2));
+        ret = MPP_OK;
+    } else {
+        ret = MPP_NOK;
+    }
+    return ret;
+}
+
 MPP_RET vepu541_set_osd(Vepu541OsdCfg *cfg)
 {
     Vepu541OsdReg *regs = (Vepu541OsdReg *)(cfg->reg_base + (size_t)VEPU541_OSD_CFG_OFFSET);
     MppDev dev = cfg->dev;
     MppEncOSDPltCfg *plt_cfg = cfg->plt_cfg;
-    MppEncOSDData *osd = cfg->osd_data;
+    MppEncOSDData2 osd;
+
+    if (copy2osd2(&osd, cfg->osd_data, cfg->osd_data2))
+        return MPP_NOK;
+
+    if (osd.num_region == 0)
+        return MPP_OK;
+
+    if (osd.num_region > 8) {
+        mpp_err_f("do NOT support more than 8 regions invalid num %d\n",
+                  osd.num_region);
+        mpp_assert(osd.num_region <= 8);
+        return MPP_NOK;
+    }
 
     if (plt_cfg->type == MPP_ENC_OSD_PLT_TYPE_USERDEF) {
         MppDevRegWrCfg wr_cfg;
@@ -518,49 +598,38 @@ MPP_RET vepu541_set_osd(Vepu541OsdCfg *cfg)
     regs->reg112.osd_e = 0;
     regs->reg112.osd_inv_e = 0;
 
-    if (NULL == osd || osd->num_region == 0 || NULL == osd->buf)
-        return MPP_OK;
+    RK_U32 i = 0;
+    MppEncOSDRegion2 *region = osd.region;
+    MppEncOSDRegion2 *tmp = region;
+    RK_U32 num = osd.num_region;
 
-    if (osd->num_region > 8) {
-        mpp_err_f("do NOT support more than 8 regions invalid num %d\n",
-                  osd->num_region);
-        mpp_assert(osd->num_region <= 8);
-        return MPP_NOK;
-    }
-
-    MppBuffer buf = osd->buf;
-    RK_S32 fd = mpp_buffer_get_fd(buf);
-    if (fd < 0) {
-        mpp_err_f("invalid osd buffer fd %d\n", fd);
-        return MPP_NOK;
-    }
-
-    size_t buf_size = mpp_buffer_get_size(buf);
-    RK_U32 num = osd->num_region;
-    RK_U32 k = 0;
-    MppEncOSDRegion *region = osd->region;
-    MppEncOSDRegion *tmp = region;
-
-    for (k = 0; k < num; k++, tmp++) {
-        regs->reg112.osd_e      |= tmp->enable << k;
-        regs->reg112.osd_inv_e  |= tmp->inverse << k;
+    for (i = 0; i < num; i++, tmp++) {
+        regs->reg112.osd_e      |= tmp->enable << i;
+        regs->reg112.osd_inv_e  |= tmp->inverse << i;
 
         if (tmp->enable && tmp->num_mb_x && tmp->num_mb_y) {
-            Vepu541OsdPos *pos = &regs->osd_pos[k];
+            Vepu541OsdPos *pos = &regs->osd_pos[i];
             size_t blk_len = tmp->num_mb_x * tmp->num_mb_y * 256;
+            RK_S32 fd = 0;
+            RK_U32 buf_size = 0;
 
             pos->osd_lt_x = tmp->start_mb_x;
             pos->osd_lt_y = tmp->start_mb_y;
             pos->osd_rb_x = tmp->start_mb_x + tmp->num_mb_x - 1;
             pos->osd_rb_y = tmp->start_mb_y + tmp->num_mb_y - 1;
 
-            regs->osd_addr[k] = fd;
-
+            buf_size = mpp_buffer_get_size(tmp->buf);
+            fd = mpp_buffer_get_fd(tmp->buf);
+            if (fd < 0) {
+                mpp_err_f("invalid osd buffer fd %d\n", fd);
+                return MPP_NOK;
+            }
+            regs->osd_addr[i] = fd;
 
             if (tmp->buf_offset) {
                 MppDevRegOffsetCfg trans_cfg;
 
-                trans_cfg.reg_idx = VEPU541_OSD_ADDR_IDX_BASE + k;
+                trans_cfg.reg_idx = VEPU541_OSD_ADDR_IDX_BASE + i;
                 trans_cfg.offset = tmp->buf_offset;
                 mpp_dev_ioctl(cfg->dev, MPP_DEV_REG_OFFSET, &trans_cfg);
             }
@@ -568,29 +637,227 @@ MPP_RET vepu541_set_osd(Vepu541OsdCfg *cfg)
             /* There should be enough buffer and offset should be 16B aligned */
             if (buf_size < tmp->buf_offset + blk_len ||
                 (tmp->buf_offset & 0xf)) {
-                mpp_err_f("invalid osd cfg: %d x:y:w:h:off %d:%d:%d:%x\n",
-                          k, tmp->start_mb_x, tmp->start_mb_y,
+                mpp_err_f("invalid osd cfg: %d x:y:w:h:off %d:%d:%d:%d:%x\n",
+                          i, tmp->start_mb_x, tmp->start_mb_y,
                           tmp->num_mb_x, tmp->num_mb_y, tmp->buf_offset);
             }
         }
     }
 
-    if (region[0].inverse)
-        regs->reg113.osd_ithd_r0 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[1].inverse)
-        regs->reg113.osd_ithd_r1 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[2].inverse)
-        regs->reg113.osd_ithd_r2 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[3].inverse)
-        regs->reg113.osd_ithd_r3 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[4].inverse)
-        regs->reg113.osd_ithd_r4 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[5].inverse)
-        regs->reg113.osd_ithd_r5 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[6].inverse)
-        regs->reg113.osd_ithd_r6 = ENC_DEFAULT_OSD_INV_THR;
-    if (region[7].inverse)
-        regs->reg113.osd_ithd_r7 = ENC_DEFAULT_OSD_INV_THR;
+    SET_OSD_INV_THR(0, regs->reg113, region);
+    SET_OSD_INV_THR(1, regs->reg113, region);
+    SET_OSD_INV_THR(2, regs->reg113, region);
+    SET_OSD_INV_THR(3, regs->reg113, region);
+    SET_OSD_INV_THR(4, regs->reg113, region);
+    SET_OSD_INV_THR(5, regs->reg113, region);
+    SET_OSD_INV_THR(6, regs->reg113, region);
+    SET_OSD_INV_THR(7, regs->reg113, region);
+
+    return MPP_OK;
+}
+
+#define VEPU540_OSD_CFG_OFFSET          0x0178
+
+typedef struct Vepu540OsdReg_t {
+    /*
+     * OSD_INV_CFG
+     * Address offset: 0x0178 Access type: read and write
+     * OSD color inverse  configuration
+     */
+    struct {
+        /*
+         * OSD color inverse enable of chroma component,
+         * each bit controls corresponding region.
+         */
+        RK_U32  osd_ch_inv_en           : 8;
+        /*
+         * OSD color inverse expression type
+         * each bit controls corresponding region.
+         * 1'h0: AND;
+         * 1'h1: OR
+         */
+        RK_U32  osd_itype               : 8;
+        /*
+         * OSD color inverse expression switch for luma component
+         * each bit controls corresponding region.
+         * 1'h0: Expression need to determine the condition;
+         * 1'h1: Expression don't need to determine the condition;
+         */
+        RK_U32  osd_lu_inv_msk          : 8;
+        /*
+         * OSD color inverse expression switch for chroma component
+         * each bit controls corresponding region.
+         * 1'h0: Expression need to determine the condition;
+         * 1'h1: Expression don't need to determine the condition;
+         */
+        RK_U32  osd_ch_inv_msk          : 8;
+    } reg094;
+
+    /* reg gap 095~111 */
+    RK_U32 reg_095_111[17];
+
+    /*
+     * OSD_CFG
+     * Address offset: 0x01C0 Access type: read and write
+     * OSD configuration
+     */
+    struct {
+        /* OSD region enable, each bit controls corresponding OSD region. */
+        RK_U32  osd_e                   : 8;
+        /* OSD inverse color enable, each bit controls corresponding region. */
+        RK_U32  osd_lu_inv_en           : 8;
+        /*
+         * OSD palette clock selection.
+         * 1'h0: Configure bus clock domain.
+         * 1'h1: Core clock domain.
+         */
+        RK_U32  osd_plt_cks             : 1;
+        /*
+         * OSD palette type.
+         * 1'h1: Default type.
+         * 1'h0: User defined type.
+         */
+        RK_U32  osd_plt_typ             : 1;
+        RK_U32  reserved                : 14;
+    } reg112;
+
+    /*
+     * OSD_INV
+     * Address offset: 0x01C4 Access type: read and write
+     * OSD color inverse configuration
+     */
+    struct {
+        /* Color inverse theshold for OSD region0. */
+        RK_U32  osd_ithd_r0             : 4;
+        /* Color inverse theshold for OSD region1. */
+        RK_U32  osd_ithd_r1             : 4;
+        /* Color inverse theshold for OSD region2. */
+        RK_U32  osd_ithd_r2             : 4;
+        /* Color inverse theshold for OSD region3. */
+        RK_U32  osd_ithd_r3             : 4;
+        /* Color inverse theshold for OSD region4. */
+        RK_U32  osd_ithd_r4             : 4;
+        /* Color inverse theshold for OSD region5. */
+        RK_U32  osd_ithd_r5             : 4;
+        /* Color inverse theshold for OSD region6. */
+        RK_U32  osd_ithd_r6             : 4;
+        /* Color inverse theshold for OSD region7. */
+        RK_U32  osd_ithd_r7             : 4;
+    } reg113;
+
+    RK_U32 reg114;
+    RK_U32 reg115;
+
+    /*
+     * OSD_POS reg116_123
+     * Address offset: 0x01D0~0x01EC Access type: read and write
+     * OSD region position
+     */
+    Vepu541OsdPos  osd_pos[8];
+
+    /*
+     * ADR_OSD reg124_131
+     * Address offset: 0x01F0~0x20C Access type: read and write
+     * Base address for OSD region, 16B aligned
+     */
+    RK_U32  osd_addr[8];
+} Vepu540OsdReg;
+
+MPP_RET vepu540_set_osd(Vepu541OsdCfg *cfg)
+{
+    Vepu540OsdReg *regs = (Vepu540OsdReg *)(cfg->reg_base + (size_t)VEPU540_OSD_CFG_OFFSET);
+    MppDev dev = cfg->dev;
+    MppEncOSDPltCfg *plt_cfg = cfg->plt_cfg;
+    MppEncOSDData2 osd;
+
+    if (copy2osd2(&osd, cfg->osd_data, cfg->osd_data2))
+        return MPP_NOK;
+
+    if (osd.num_region == 0)
+        return MPP_OK;
+
+    if (osd.num_region > 8) {
+        mpp_err_f("do NOT support more than 8 regions invalid num %d\n",
+                  osd.num_region);
+        mpp_assert(osd.num_region <= 8);
+        return MPP_NOK;
+    }
+
+    if (plt_cfg->type == MPP_ENC_OSD_PLT_TYPE_USERDEF) {
+        MppDevRegWrCfg wr_cfg;
+
+        wr_cfg.reg = plt_cfg->plt;
+        wr_cfg.size = sizeof(MppEncOSDPlt);
+        wr_cfg.offset = VEPU541_REG_BASE_OSD_PLT;
+        mpp_dev_ioctl(dev, MPP_DEV_REG_WR, &wr_cfg);
+
+        regs->reg112.osd_plt_cks = 1;
+        regs->reg112.osd_plt_typ = VEPU541_OSD_PLT_TYPE_USERDEF;
+    } else {
+        regs->reg112.osd_plt_cks = 0;
+        regs->reg112.osd_plt_typ = VEPU541_OSD_PLT_TYPE_DEFAULT;
+    }
+
+    regs->reg112.osd_e = 0;
+    regs->reg112.osd_lu_inv_en = 0;
+    regs->reg094.osd_ch_inv_en = 0;
+    regs->reg094.osd_lu_inv_msk = 0;
+
+    RK_U32 num = osd.num_region;
+    RK_U32 k = 0;
+    MppEncOSDRegion2 *region = osd.region;
+    MppEncOSDRegion2 *tmp = region;
+
+    for (k = 0; k < num; k++, tmp++) {
+        regs->reg112.osd_e          |= tmp->enable << k;
+        regs->reg112.osd_lu_inv_en  |= (tmp->inverse) ? (1 << k) : 0;
+        regs->reg094.osd_ch_inv_en  |= (tmp->inverse) ? (1 << k) : 0;
+
+        if (tmp->enable && tmp->num_mb_x && tmp->num_mb_y) {
+            Vepu541OsdPos *pos = &regs->osd_pos[k];
+            size_t blk_len = tmp->num_mb_x * tmp->num_mb_y * 256;
+            RK_S32 fd = -1;
+            size_t buf_size = 0;
+
+            pos->osd_lt_x = tmp->start_mb_x;
+            pos->osd_lt_y = tmp->start_mb_y;
+            pos->osd_rb_x = tmp->start_mb_x + tmp->num_mb_x - 1;
+            pos->osd_rb_y = tmp->start_mb_y + tmp->num_mb_y - 1;
+
+            buf_size = mpp_buffer_get_size(tmp->buf);
+            fd = mpp_buffer_get_fd(tmp->buf);
+            if (fd < 0) {
+                mpp_err_f("invalid osd buffer fd %d\n", fd);
+                return MPP_NOK;
+            }
+            regs->osd_addr[k] = fd;
+
+            if (tmp->buf_offset) {
+                MppDevRegOffsetCfg trans_cfg;
+
+                trans_cfg.reg_idx = VEPU541_OSD_ADDR_IDX_BASE + k;
+                trans_cfg.offset = tmp->buf_offset;
+                mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
+            }
+
+            /* There should be enough buffer and offset should be 16B aligned */
+            if (buf_size < tmp->buf_offset + blk_len ||
+                (tmp->buf_offset & 0xf)) {
+                mpp_err_f("invalid osd cfg: %d x:y:w:h:off %d:%d:%d:%d:%x size %x\n",
+                          k, tmp->start_mb_x, tmp->start_mb_y,
+                          tmp->num_mb_x, tmp->num_mb_y, tmp->buf_offset, buf_size);
+            }
+        }
+    }
+
+    SET_OSD_INV_THR(0, regs->reg113, region);
+    SET_OSD_INV_THR(1, regs->reg113, region);
+    SET_OSD_INV_THR(2, regs->reg113, region);
+    SET_OSD_INV_THR(3, regs->reg113, region);
+    SET_OSD_INV_THR(4, regs->reg113, region);
+    SET_OSD_INV_THR(5, regs->reg113, region);
+    SET_OSD_INV_THR(6, regs->reg113, region);
+    SET_OSD_INV_THR(7, regs->reg113, region);
 
     return MPP_OK;
 }

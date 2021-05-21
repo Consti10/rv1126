@@ -171,7 +171,18 @@ typedef enum {
 
 #define MPP_FRAME_FBC_MASK          (0x00f00000)
 #define MPP_FRAME_FBC_NONE          (0x00000000)
+/*
+ * AFBC_V1 is for ISP output.
+ * It has default payload offset to be calculated * from width and height:
+ * Payload offset = MPP_ALIGN(MPP_ALIGN(width, 16) * MPP_ALIGN(height, 16) / 16, SZ_4K)
+ */
 #define MPP_FRAME_FBC_AFBC_V1       (0x00100000)
+/*
+ * AFBC_V2 is for video decoder output.
+ * It stores payload offset in first 32-bit in header address
+ * Payload offset is always set to zero.
+ */
+#define MPP_FRAME_FBC_AFBC_V2       (0x00200000)
 
 #define MPP_FRAME_FMT_LE_MASK       (0x01000000)
 
@@ -269,6 +280,30 @@ MppFrame mpp_frame_get_next(MppFrame frame);
 
 /*
  * normal parameter
+ *
+ *    offset_x
+ *   <-------->
+ *
+ *   <---------------+      hor_stride      +--------------->
+ *
+ *   +------------------------------------------------------+   ^   ^
+ *   |                                                      |   |   |
+ *   |                                                      |   |   | offset_y
+ *   |                                                      |   |   |
+ *   |        +--------------------------------+  ^         |   |   v
+ *   |        |                                |  |         |   |
+ *   |        |                                |  +         |   +
+ *   |        |                                |            |
+ *   |        |        valid data area         | height     | ver_stride
+ *   |        |                                |            |
+ *   |        |                                |  +         |   +
+ *   |        |                                |  |         |   |
+ *   |        +--------------------------------+  v         |   |
+ *   |                                                      |   |
+ *   |        <----------+   width   +--------->            |   |
+ *   |                                                      |   |
+ *   +------------------------------------------------------+   v
+ *
  */
 RK_U32  mpp_frame_get_width(const MppFrame frame);
 void    mpp_frame_set_width(MppFrame frame, RK_U32 width);
@@ -278,6 +313,13 @@ RK_U32  mpp_frame_get_hor_stride(const MppFrame frame);
 void    mpp_frame_set_hor_stride(MppFrame frame, RK_U32 hor_stride);
 RK_U32  mpp_frame_get_ver_stride(const MppFrame frame);
 void    mpp_frame_set_ver_stride(MppFrame frame, RK_U32 ver_stride);
+void    mpp_frame_set_hor_stride_pixel(MppFrame frame, RK_U32 hor_stride_pixel);
+RK_U32  mpp_frame_get_hor_stride_pixel(const MppFrame frame);
+
+RK_U32  mpp_frame_get_offset_x(const MppFrame frame);
+void    mpp_frame_set_offset_x(MppFrame frame, RK_U32 offset_x);
+RK_U32  mpp_frame_get_offset_y(const MppFrame frame);
+void    mpp_frame_set_offset_y(MppFrame frame, RK_U32 offset_y);
 RK_U32  mpp_frame_get_mode(const MppFrame frame);
 void    mpp_frame_set_mode(MppFrame frame, RK_U32 mode);
 RK_U32  mpp_frame_get_discard(const MppFrame frame);

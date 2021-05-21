@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
   VI_CHN_ATTR_S vi_chn_attr;
   memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
   vi_chn_attr.pcVideoNode = "rkispp_scale1";
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = video_width;
   vi_chn_attr.u32Height = video_height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
 
   memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
   vi_chn_attr.pcVideoNode = "rkispp_scale1";
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = video_width;
   vi_chn_attr.u32Height = video_height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;

@@ -40,6 +40,7 @@
 /* decoder control command */
 #define CMD_DEC_CFG_ALL                 (0x00000000)
 #define CMD_DEC_QUERY                   (0x00000100)
+#define CMD_DEC_CFG                     (0x00000200)
 
 /* encoder control command */
 #define CMD_ENC_CFG_ALL                 (0x00000000)
@@ -94,6 +95,10 @@ typedef enum {
     /* query decoder runtime information for decode stage */
     MPP_DEC_QUERY,                      /* set and get MppDecQueryCfg structure */
 
+    CMD_DEC_CMD_CFG                     = CMD_MODULE_CODEC | CMD_CTX_ID_DEC | CMD_DEC_CFG,
+    MPP_DEC_SET_CFG,                    /* set MppDecCfg structure */
+    MPP_DEC_GET_CFG,                    /* get MppDecCfg structure */
+
     MPP_DEC_CMD_END,
 
     MPP_ENC_CMD_BASE                    = CMD_MODULE_CODEC | CMD_CTX_ID_ENC,
@@ -115,7 +120,7 @@ typedef enum {
     MPP_ENC_GET_EXTRA_INFO,             /* deprecated */
     MPP_ENC_SET_SEI_CFG,                /* SEI: Supplement Enhancemant Information, parameter is MppSeiMode */
     MPP_ENC_GET_SEI_DATA,               /* SEI: Supplement Enhancemant Information, parameter is MppPacket */
-    MPP_ENC_PRE_ALLOC_BUFF,             /* allocate buffers before encoding */
+    MPP_ENC_PRE_ALLOC_BUFF,             /* deprecated */
     MPP_ENC_SET_QP_RANGE,               /* used for adjusting qp range, the parameter can be 1 or 2 */
     MPP_ENC_SET_ROI_CFG,                /* set MppEncROICfg structure */
     MPP_ENC_SET_CTU_QP,                 /* for H265 Encoder,set CTU's size and QP */
@@ -176,6 +181,7 @@ typedef enum {
 } MpiCmd;
 
 #include "rk_vdec_cmd.h"
+#include "rk_vdec_cfg.h"
 #include "rk_venc_cmd.h"
 #include "rk_venc_cfg.h"
 #include "rk_venc_ref.h"

@@ -32,6 +32,7 @@ set(MPP_DRIVER
 )
 
 add_library(osal STATIC
+    mpp_soc.cpp
     mpp_platform.cpp
     mpp_runtime.cpp
     mpp_allocator.cpp
@@ -68,6 +69,7 @@ target_include_directories(osal PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/allocator"
+    "${CMAKE_CURRENT_SOURCE_DIR}/driver/inc"
 )
 
 set_target_properties(osal PROPERTIES FOLDER "osal")

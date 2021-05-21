@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   RK_U32 u32FrameCnt = 1024;
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
-  RK_CHAR *pOutPath = "/tmp/ai.wav";
+  RK_CHAR *pOutPath = "/tmp/ai.pcm";
   int c;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {

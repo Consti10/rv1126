@@ -17,61 +17,55 @@
 
 #define MODULE_TAG "jpegd_parser"
 
+#include <string.h>
+
 #include "mpp_env.h"
 #include "mpp_mem.h"
+#include "mpp_soc.h"
 #include "mpp_bitread.h"
 #include "mpp_packet_impl.h"
 
 #include "jpegd_api.h"
 #include "jpegd_parser.h"
-#include "mpp_platform.h"
 
 RK_U32 jpegd_debug = 0x0;
 
 /* return the 8 bit start code value and update the search
    state. Return -1 if no start code found */
-static RK_S32 jpegd_find_marker(const RK_U8 **pbuf_ptr, const RK_U8 *buf_end)
+static RK_U8 jpegd_find_marker(const RK_U8 **pbuf_ptr, const RK_U8 *buf_end)
 {
-    const RK_U8 *buf_ptr;
-    unsigned int v, v2;
-    int val;
-    int skipped = 0;
+    const RK_U8 *buf_ptr = NULL;
+    RK_U8 val = 0;
+    RK_U8 start_code = 0xff;
+    RK_U32 buf_size = buf_end - *pbuf_ptr + 1;
 
-    buf_ptr = *pbuf_ptr;
-    while (buf_end - buf_ptr > 1) {
-        v  = *buf_ptr++;
-        v2 = *buf_ptr;
-        if ((v == 0xff) && (v2 >= 0xc0) && (v2 <= 0xfe) && buf_ptr < buf_end) {
-            val = *buf_ptr++;
-            goto found;
-        } else if ((v == 0x89) && (v2 == 0x50)) {
-            // many usb camera go here, log if set jpegd debug
-            jpegd_dbg_marker("input img maybe png format,check it\n");
-        }
-        skipped++;
+    buf_ptr = memchr(*pbuf_ptr, start_code, buf_size);
+    if (buf_ptr && (buf_end > buf_ptr) && *(buf_ptr + 1) >= 0xc0 && *(buf_ptr + 1) <= 0xfe) {
+        val = *(buf_ptr + 1);
+        jpegd_dbg_marker("find_marker skipped %d bytes\n", buf_ptr - *pbuf_ptr);
+        goto found;
+    } else {
+        buf_ptr = buf_end;
     }
-    buf_ptr = buf_end;
-    val = -1;
 
 found:
-    jpegd_dbg_marker("find_marker skipped %d bytes\n", skipped);
-    *pbuf_ptr = buf_ptr;
+    *pbuf_ptr = buf_ptr + 2;
     return val;
 }
 
-static
-MPP_RET jpeg_image_check_size(RK_U32 hor_stride, RK_U32 ver_stride)
+static MPP_RET jpegd_find_eoi(const RK_U8 **pbuf_ptr, const RK_U8 *buf_end)
 {
-    MPP_RET ret = MPP_OK;
+    const RK_U8 *buf_ptr = NULL;
+    RK_S32 eoi = 0xffd9;
+    RK_U32 buf_size = buf_end - *pbuf_ptr + 1;
 
-    if (hor_stride > MAX_WIDTH || ver_stride > MAX_HEIGHT ||
-        hor_stride < MIN_WIDTH || ver_stride < MIN_HEIGHT ||
-        hor_stride * ver_stride > MAX_STREAM_LENGTH) {
-        mpp_err_f("unsupported resolution: %dx%d\n", hor_stride, ver_stride);
-        ret = MPP_NOK;
+    buf_ptr = memchr(*pbuf_ptr, eoi, buf_size);
+
+    if (buf_ptr && (buf_end > buf_ptr)) {
+        return MPP_OK;
     }
 
-    return ret;
+    return MPP_NOK;
 }
 
 static MPP_RET jpeg_judge_yuv_mode(JpegdCtx *ctx)
@@ -269,6 +263,8 @@ static MPP_RET jpegd_decode_dht(JpegdCtx *ctx)
         if (table_type == HUFFMAN_TABLE_TYPE_DC) {
             DcTable *ptr = &(syntax->dc_table[table_id]);
 
+            syntax->htbl_entry++;
+
             for (i = 0; i < num; i++) {
                 READ_BITS(gb, 8, &value);
                 ptr->vals[i] = value;
@@ -277,6 +273,8 @@ static MPP_RET jpegd_decode_dht(JpegdCtx *ctx)
             }
         } else {
             AcTable *ptr = &(syntax->ac_table[table_id]);
+
+            syntax->htbl_entry++;
 
             for (i = 0; i < num; i++) {
                 READ_BITS(gb, 8, &value);
@@ -337,6 +335,9 @@ static MPP_RET jpegd_decode_dqt(JpegdCtx *ctx)
             READ_BITS(gb, pr ? 16 : 8, &value);
             syntax->quant_matrixes[index][i] = value;
         }
+        syntax->qtbl_entry++;
+        if (syntax->qtbl_entry > MAX_COMPONENTS)
+            mpp_err_f("%d entries qtbl is not supported\n", syntax->qtbl_entry);
 
         if (jpegd_debug & JPEGD_DBG_TABLE) {
             /* debug code */
@@ -430,6 +431,7 @@ static MPP_RET jpegd_decode_sof(JpegdCtx *ctx)
         mpp_err_f("bits %d is invalid\n", bits);
         return MPP_ERR_STREAM;
     }
+    syntax->sample_precision = bits;
 
     READ_BITS(gb, 16, &height);
     READ_BITS(gb, 16, &width);
@@ -440,10 +442,6 @@ static MPP_RET jpegd_decode_sof(JpegdCtx *ctx)
 
     jpegd_dbg_marker("sof0: picture: %dx%d, stride: %dx%d\n", width, height,
                      syntax->hor_stride, syntax->ver_stride);
-    if (jpeg_image_check_size(syntax->hor_stride, syntax->ver_stride)) {
-        mpp_err_f("check size failed\n");
-        return MPP_ERR_STREAM;
-    }
 
     READ_BITS(gb, 8 , &nb_components);
     if ((nb_components != 1) && (nb_components != MAX_COMPONENTS)) {
@@ -768,6 +766,9 @@ static MPP_RET jpegd_decode_frame(JpegdCtx *ctx)
     const RK_U8 *buf_ptr = buf;
     const RK_U8 *const buf_end = buf + buf_size;
 
+    syntax->htbl_entry = 0;
+    syntax->qtbl_entry = 0;
+
     if (buf_size < 4 || *buf_ptr != 0xFF || *(buf_ptr + 1) != SOI) {
         // not jpeg
         ret = MPP_ERR_STREAM;
@@ -775,7 +776,6 @@ static MPP_RET jpegd_decode_frame(JpegdCtx *ctx)
     }
 
     while (buf_ptr < buf_end) {
-        int section_finish = 1;
         /* find start marker */
         start_code = jpegd_find_marker(&buf_ptr, buf_end);
         if (start_code < 0) {
@@ -825,6 +825,11 @@ static MPP_RET jpegd_decode_frame(JpegdCtx *ctx)
                 mpp_err_f("sof0 decode error\n");
                 goto fail;
             }
+            if (ctx->syntax->sample_precision != 8) {
+                mpp_err_f("Illegal sample precision %d.\n\
+                    For baseline, it should be 8\n", ctx->syntax->sample_precision);
+                goto fail;
+            }
             break;
         case EOI:
             syntax->eoi_found = 1;
@@ -869,37 +874,17 @@ static MPP_RET jpegd_decode_frame(JpegdCtx *ctx)
                 goto fail;
             }
             break;
-        case SOF2:
-        case SOF3:
-        case SOF5:
-        case SOF6:
-        case SOF7:
-        case SOF9:
-        case SOF10:
-        case SOF11:
-        case SOF13:
-        case SOF14:
-        case SOF15:
-        case SOF48:
-        case LSE:
-        case JPG:
-            section_finish = 0;
-            mpp_log("jpeg: unsupported coding type (0x%x)\n", start_code);
-            break;
         default:
-            section_finish = 0;
             jpegd_dbg_marker("unhandled coding type(0x%x) in switch..case..\n",
                              start_code);
-            break;
-        }
-
-        if (!section_finish) {
             if ((ret = jpegd_skip_section(ctx)) != MPP_OK) {
                 jpegd_dbg_marker("Fail to skip section 0xFF%02x!\n",
                                  start_code);
                 goto fail;
             }
+            break;
         }
+
         buf_ptr = ctx->bit_ctx->data_;
     }
 
@@ -907,13 +892,12 @@ done:
     if (!syntax->dht_found) {
         jpegd_dbg_marker("sorry, DHT is not found!\n");
         jpegd_setup_default_dht(ctx);
+        syntax->htbl_entry = syntax->nb_components;
+    } else {
+        syntax->htbl_entry /= 2;
     }
     if (!syntax->eoi_found) {
-        // recheck again, maybe we done wrong
-        const RK_U8 *buf_end_ = buf_end;
-        while (*(--buf_end_) == 0)
-            buf_size--;
-        if (buf_size < 2 || *(buf_end_ - 1) != 0xFF || *buf_end_ != EOI) {
+        if (MPP_OK != jpegd_find_eoi(&buf_ptr, buf_end)) {
             mpp_err_f("EOI marker not found!\n");
             ret = MPP_ERR_STREAM;
         }
@@ -1214,7 +1198,7 @@ static MPP_RET jpegd_init(void *ctx, ParserCfg *parser_cfg)
 
     const char* soc_name = NULL;
     soc_name = mpp_get_soc_name();
-    if (soc_name && strstr(soc_name, "1108")) {
+    if (soc_name && (strstr(soc_name, "1108") || strstr(soc_name, "3566"))) {
         /* rv1108: no need to copy stream when decoding jpeg;
          *         just scan parts of markers to reduce CPU's occupancy
          */

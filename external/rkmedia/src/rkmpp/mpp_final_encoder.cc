@@ -169,9 +169,6 @@ public:
 };
 
 bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
-
-    LOG("Consti10:MPPMJPEGConfig::InitConfig\n");
-
   // for jpeg/mjpeg common.
   ImageConfig img_cfg;
   ImageInfo img_info;
@@ -230,7 +227,7 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
       return false;
     }
   } else {
-    LOG("ERROR: MPP Encoder[JPEG]: mpp enc cfg type(%d) is invalid!\n");
+    LOG("ERROR: MPP Encoder[JPEG]: mpp enc cfg type(%d) is invalid!\n", cfg.type);
     return false;
   }
 

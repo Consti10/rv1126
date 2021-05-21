@@ -242,10 +242,11 @@ static void generate_info_set(MppBufSlotsImpl *impl, MppFrame frame, RK_U32 forc
     RK_U32 width  = mpp_frame_get_width(frame);
     RK_U32 height = mpp_frame_get_height(frame);
     MppFrameFormat fmt = mpp_frame_get_fmt(frame);
-    RK_U32 depth = (fmt == MPP_FMT_YUV420SP_10BIT
-                    || fmt == MPP_FMT_YUV422SP_10BIT) ? 10 : 8;
+    RK_U32 depth = ((fmt & MPP_FRAME_FMT_MASK) == MPP_FMT_YUV420SP_10BIT ||
+                    (fmt & MPP_FRAME_FMT_MASK) == MPP_FMT_YUV422SP_10BIT) ? 10 : 8;
     RK_U32 codec_hor_stride = mpp_frame_get_hor_stride(frame);
     RK_U32 codec_ver_stride = mpp_frame_get_ver_stride(frame);
+
     RK_U32 hal_hor_stride = (codec_hor_stride) ?
                             (impl->hal_hor_align(codec_hor_stride)) :
                             (impl->hal_hor_align(width * depth >> 3));
@@ -253,19 +254,43 @@ static void generate_info_set(MppBufSlotsImpl *impl, MppFrame frame, RK_U32 forc
                             (impl->hal_ver_align(codec_ver_stride)) :
                             (impl->hal_ver_align(height));
 
+    RK_U32 hor_stride_pixel = width;
+
     hal_hor_stride = (force_default_align && codec_hor_stride) ? codec_hor_stride : hal_hor_stride;
     hal_ver_stride = (force_default_align && codec_ver_stride) ? codec_ver_stride : hal_ver_stride;
 
     RK_U32 size = hal_hor_stride * hal_ver_stride;
-    size *= impl->numerator;
-    size /= impl->denominator;
-    size = impl->hal_len_align ? impl->hal_len_align(hal_hor_stride * hal_ver_stride) : size;
 
+    if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+        /*fbc stride default 64 align*/
+        hal_hor_stride = MPP_ALIGN(width, 64) * depth >> 3;
+        hor_stride_pixel = MPP_ALIGN(hor_stride_pixel,  64);
+
+        switch ((fmt & MPP_FRAME_FMT_MASK)) {
+        case MPP_FMT_YUV420SP_10BIT :
+        case MPP_FMT_YUV420SP : {
+            size = hal_hor_stride * hal_ver_stride * 3 / 2;
+        } break;
+        case MPP_FMT_YUV422SP_10BIT :
+        case MPP_FMT_YUV422SP : {
+            size = hal_hor_stride * hal_ver_stride * 2;
+        } break;
+        default : {
+            size = hal_hor_stride * hal_ver_stride * 3 / 2;
+            mpp_err("dec out fmt is no support");
+        } break;
+        }
+    } else {
+        size *= impl->numerator;
+        size /= impl->denominator;
+        size = impl->hal_len_align ? impl->hal_len_align(hal_hor_stride * hal_ver_stride) : size;
+    }
     mpp_frame_set_width(impl->info_set, width);
     mpp_frame_set_height(impl->info_set, height);
     mpp_frame_set_fmt(impl->info_set, fmt);
     mpp_frame_set_hor_stride(impl->info_set, hal_hor_stride);
     mpp_frame_set_ver_stride(impl->info_set, hal_ver_stride);
+    mpp_frame_set_hor_stride_pixel(impl->info_set, hor_stride_pixel);
     mpp_frame_set_buf_size(impl->info_set, size);
     mpp_frame_set_buf_size(frame, size);
     impl->buf_size = size;
@@ -668,6 +693,18 @@ size_t mpp_buf_slot_get_size(MppBufSlots slots)
     return impl->buf_size;
 }
 
+RK_S32 mpp_buf_slot_get_count(MppBufSlots slots)
+{
+    if (NULL == slots) {
+        mpp_err_f("found NULL input\n");
+        return -1;
+    }
+
+    MppBufSlotsImpl *impl = (MppBufSlotsImpl *)slots;
+    AutoMutex auto_lock(impl->lock);
+    return impl->buf_count;
+}
+
 MPP_RET mpp_buf_slot_get_unused(MppBufSlots slots, RK_S32 *index)
 {
     if (NULL == slots || NULL == index) {
@@ -832,16 +869,14 @@ MPP_RET mpp_buf_slot_set_prop(MppBufSlots slots, RK_S32 index, SlotPropType type
             impl->info_changed = 1;
 
             if (old->width || old->height) {
-                mpp_dbg(MPP_DBG_INFO, "info change found\n");
-                mpp_dbg(MPP_DBG_INFO,
-                        "old width %4d height %4d stride hor %4d ver %4d fmt %4d\n",
-                        old->width, old->height, old->hor_stride,
-                        old->ver_stride, old->fmt);
+                mpp_dbg_info("info change found\n");
+                mpp_dbg_info("old width %4d height %4d stride hor %4d ver %4d fmt %4d\n",
+                             old->width, old->height, old->hor_stride,
+                             old->ver_stride, old->fmt);
             }
-            mpp_dbg(MPP_DBG_INFO,
-                    "new width %4d height %4d stride hor %4d ver %4d fmt %4d\n",
-                    dst->width, dst->height, dst->hor_stride, dst->ver_stride,
-                    dst->fmt);
+            mpp_dbg_info("new width %4d height %4d stride hor %4d ver %4d fmt %4d\n",
+                         dst->width, dst->height, dst->hor_stride, dst->ver_stride,
+                         dst->fmt);
             // info change found here
         }
     } break;

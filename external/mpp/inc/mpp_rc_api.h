@@ -46,12 +46,12 @@
  */
 
 typedef enum RcMode_e {
-    RC_CBR,
     RC_VBR,
+    RC_CBR,
+    RC_FIXQP,
     RC_AVBR,
     RC_CVBR,
     RC_QVBR,
-    RC_FIXQP,
     RC_LEARNING,
     RC_MODE_BUTT,
 } RcMode;
@@ -92,6 +92,18 @@ typedef struct RcFpsCfg_t {
     RK_S32      fps_out_num;
     RK_S32      fps_out_denorm;
 } RcFpsCfg;
+
+typedef struct RcSuperframeCfg_t {
+    MppEncRcSuperFrameMode  super_mode;
+    RK_U32                  super_i_thd;
+    RK_U32                  super_p_thd;
+    MppEncRcPriority        rc_priority;
+} RcSuperframeCfg;
+
+typedef struct RcDebreathCfg_t {
+    RK_U32      enable;
+    RK_U32      strength;
+} RcDebreathCfg;
 
 /*
  * Control parameter from external config
@@ -157,6 +169,9 @@ typedef struct RcCfg_s {
     MppEncRcDropFrmMode drop_mode;
     RK_U32      drop_thd;
     RK_U32      drop_gap;
+
+    RcSuperframeCfg super_cfg;
+    RcDebreathCfg   debreath_cfg;
 } RcCfg;
 
 /*

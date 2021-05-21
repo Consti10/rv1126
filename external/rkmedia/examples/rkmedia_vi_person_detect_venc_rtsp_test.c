@@ -395,7 +395,7 @@ static void SAMPLE_COMMON_VI_Start(struct Session *session,
                                    VI_CHN_WORK_MODE mode) {
   VI_CHN_ATTR_S vi_chn_attr;
 
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = session->u32Width;
   vi_chn_attr.u32Height = session->u32Height;
   vi_chn_attr.enWorkMode = mode;

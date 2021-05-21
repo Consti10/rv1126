@@ -197,7 +197,7 @@ static MPP_RET m2vd_parser_init_ctx(M2VDParserContext *ctx, ParserCfg *cfg)
     ctx->mExtraHeaderDecFlag = 0;
     ctx->max_stream_size = M2VD_BUF_SIZE_BITMEM;
     ctx->ref_frame_cnt = 0;
-    ctx->need_split = cfg->need_split;
+    ctx->need_split = cfg->cfg->base.split_parse;
     ctx->left_length = 0;
     ctx->vop_header_found = 0;
 
@@ -1222,9 +1222,11 @@ static MPP_RET m2v_update_ref_frame(M2VDParserContext *p)
             M2VDFrameHead *tmpHD = NULL;
             p->ref_frame_cnt++;
             if (p->frame_ref0->slot_index < 0x7f) {
-                mpp_buf_slot_set_flag(p->frame_slots, p->frame_ref0->slot_index, SLOT_QUEUE_USE);
-                mpp_buf_slot_enqueue(p->frame_slots, p->frame_ref0->slot_index, QUEUE_DISPLAY);
-                p->frame_ref0->flags = 0;
+                if (p->frame_ref0->flags) {
+                    mpp_buf_slot_set_flag(p->frame_slots, p->frame_ref0->slot_index, SLOT_QUEUE_USE);
+                    mpp_buf_slot_enqueue(p->frame_slots, p->frame_ref0->slot_index, QUEUE_DISPLAY);
+                    p->frame_ref0->flags = 0;
+                }
             }
             if (p->frame_ref1->slot_index < 0x7f) {
                 mpp_buf_slot_clr_flag(p->frame_slots, p->frame_ref1->slot_index, SLOT_CODEC_USE);

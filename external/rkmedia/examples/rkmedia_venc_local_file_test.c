@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -22,10 +23,11 @@ static void sigterm_handler(int sig) {
 }
 
 static void *GetMediaBuffer(void *arg) {
-  printf("#Start %s thread, arg:%p\n", __func__, arg);
-  FILE *save_file = fopen("/userdata/output.h264", "w");
+  char *ot_path = (char *)arg;
+  printf("#Start %s thread, arg:%p, out path: %s\n", __func__, arg, ot_path);
+  FILE *save_file = fopen(ot_path, "w");
   if (!save_file)
-    printf("ERROR: Open /userdata/output.h264 failed!\n");
+    printf("ERROR: Open %s failed!\n", ot_path);
 
   MEDIA_BUFFER mb = NULL;
   while (!quit) {
@@ -52,7 +54,48 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-int main() {
+static RK_CHAR optstr[] = "?:i:o:h";
+static const struct option long_options[] = {
+    {"input", required_argument, NULL, 'i'},
+    {"output", required_argument, NULL, 'o'},
+    {"help", no_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0},
+};
+
+static void print_usage(const RK_CHAR *name) {
+  printf("usage example:\n");
+  printf("\t%s "
+         "[-i | --input /tmp/1080p.nv12] "
+         "[-o | --output /tmp/output.h264] "
+         "[-h | --help] ",
+         name);
+  printf("\t-i | --input: VI height, Default:/tmp/1080p.nv12\n");
+  printf("\t-o | --output: VI width, Default:/tmp/output.h264\n");
+  printf("\t-h | --help: show help\n");
+}
+
+int main(int argc, char *argv[]) {
+  char *input_file = "/tmp/1080p.nv12";
+  char *output_file = "/tmp/output.h264";
+  int c = 0;
+  opterr = 1;
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    switch (c) {
+    case 'i':
+      input_file = optarg;
+      break;
+    case 'o':
+      output_file = optarg;
+      break;
+    case 'h':
+      print_usage(argv[0]);
+      return 0;
+    case '?':
+    default:
+      print_usage(argv[0]);
+      return 0;
+    }
+  }
   RK_S32 ret = 0;
   RK_MPI_SYS_Init();
 
@@ -80,16 +123,16 @@ int main() {
   printf("%s initial finish\n", __func__);
   signal(SIGINT, sigterm_handler);
 
-  FILE *read_file = fopen("/userdata/1080p.nv12", "r");
+  FILE *read_file = fopen(input_file, "r");
   if (!read_file) {
-    printf("ERROR: open /userdata/1080p.nv12 failed!\n");
+    printf("ERROR: open %s failed!\n", input_file);
     exit(0);
   }
 
   MB_IMAGE_INFO_S stImageInfo = {1920, 1080, 1920, 1080, IMAGE_TYPE_NV12};
 
   pthread_t read_thread;
-  pthread_create(&read_thread, NULL, GetMediaBuffer, NULL);
+  pthread_create(&read_thread, NULL, GetMediaBuffer, output_file);
 
   RK_U32 u32FrameId = 0;
   RK_S32 s32ReadSize = 0;

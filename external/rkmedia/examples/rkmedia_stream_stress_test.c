@@ -127,7 +127,7 @@ int StreamOn(StreamInfo *info) {
 
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = info->video_node;
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = info->width;
   vi_chn_attr.u32Height = info->height;
   vi_chn_attr.enPixFmt = info->pix_fmt;
@@ -147,7 +147,7 @@ int StreamOn(StreamInfo *info) {
     }
     memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
     vi_chn_attr.pcVideoNode = info->luma_node;
-    vi_chn_attr.u32BufCnt = 4;
+    vi_chn_attr.u32BufCnt = 3;
     vi_chn_attr.u32Width = 1280;
     vi_chn_attr.u32Height = 720;
     vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -353,7 +353,7 @@ static void print_usage(char *name) {
   printf("  @[-s] The duration of the stream on. default:5s\n");
   printf("  @[-w] img width for rkispp_m_bypass. default: 2688\n");
   printf("  @[-h] img height for rkispp_m_bypass. default: 1520\n");
-  printf("  @[-a] the path of iqfiles. default: NULL\n");
+  printf("  @[-a] the path of iqfiles. default: /oem/etc/iqfiles/\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -365,7 +365,7 @@ int main(int argc, char *argv[]) {
   RK_BOOL fec_enable;
   const char *cur_hdr_mode_name;
   const char *last_hdr_mode_name;
-  const char *iq_file_dir = NULL;
+  const char *iq_file_dir = "/oem/etc/iqfiles/";
   int fps;
   int c = 0;
 

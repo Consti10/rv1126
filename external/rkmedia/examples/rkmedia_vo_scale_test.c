@@ -27,8 +27,6 @@ int main(int argc, char *argv[]) {
   int ret = 0;
   int video_width = 1920;
   int video_height = 1080;
-
-  RK_MPI_SYS_Init();
 #ifdef RKAIQ
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RK_BOOL fec_enable = RK_FALSE;
@@ -47,10 +45,9 @@ int main(int argc, char *argv[]) {
   SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
   SAMPLE_COMM_ISP_Run();
   SAMPLE_COMM_ISP_SetFrameRate(fps);
-#else
-  (void)argc;
-  (void)argv;
 #endif
+
+  RK_MPI_SYS_Init();
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = "rkispp_scale0";
   vi_chn_attr.u32BufCnt = 4;

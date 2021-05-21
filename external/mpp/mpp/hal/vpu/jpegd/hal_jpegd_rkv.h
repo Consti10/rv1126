@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Rockchip Electronics Co. LTD
+ * Copyright 2020 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef __HAL_JPEGD_RKV_H__
+#define __HAL_JPEGD_RKV_H__
 
-#ifndef __H265E_API_V2_H__
-#define __H265E_API_V2_H__
+#include "rk_type.h"
 
-#include "enc_impl_api.h"
+MPP_RET hal_jpegd_rkv_init(void *hal, MppHalCfg *cfg);
+MPP_RET hal_jpegd_rkv_deinit(void *hal);
+MPP_RET hal_jpegd_rkv_gen_regs(void *hal,  HalTaskInfo *syn);
+MPP_RET hal_jpegd_rkv_start(void *hal, HalTaskInfo *task);
+MPP_RET hal_jpegd_rkv_wait(void *hal, HalTaskInfo *task);
+MPP_RET hal_jpegd_rkv_control(void *hal, MpiCmd cmd_type, void *param);
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
-
-extern const EncImplApi api_h265e;
-
-#ifdef  __cplusplus
-}
-#endif
-
-#endif /*__H265E_API_V2_H__*/
+#endif /* __HAL_JPEGD_RKV_H__ */

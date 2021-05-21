@@ -1261,7 +1261,7 @@ static MPP_RET scan_dpb_output(H264_DpbBuf_t *p_Dpb, H264_StorePic_t *p)
             p_Dpb->poc_interval = 1;
         }
 
-        if (p_Dpb->p_Vid->p_Dec->immediate_out ||
+        if (p_Dpb->p_Vid->p_Dec->cfg->base.fast_out ||
             (p_err->i_slice_no < 2 && p_Dpb->last_output_poc == INT_MIN)) {
             FUN_CHECK(ret = write_stored_frame(p_Dpb->p_Vid, p_Dpb, fs));
         } else {
@@ -1313,7 +1313,7 @@ MPP_RET store_picture_in_dpb(H264_DpbBuf_t *p_Dpb, H264_StorePic_t *p)
         }
     }
     //!< if necessary, combine top and botteom to frame
-    if (get_filed_dpb_combine_flag(p_Dpb->last_picture, p)) {
+    if (get_field_dpb_combine_flag(p_Dpb->last_picture, p)) {
         if (p_Dpb->last_picture->is_directout) {
             FUN_CHECK(ret = direct_output(p_Vid, p_Dpb, p));  //!< output frame
         } else {
@@ -1677,13 +1677,13 @@ __FAILED:
 ***********************************************************************
 */
 //extern "C"
-RK_U32 get_filed_dpb_combine_flag(H264_FrameStore_t *p_last, H264_StorePic_t *p)
+RK_U32 get_field_dpb_combine_flag(H264_FrameStore_t *p_last, H264_StorePic_t *p)
 {
     RK_U32 combine_flag = 0;
 
     if ((p->structure == TOP_FIELD) || (p->structure == BOTTOM_FIELD)) {
         // check for frame store with same pic_number
-        if (p_last) {
+        if (p_last && (p_last->structure == TOP_FIELD || p_last->structure == BOTTOM_FIELD)) {
             if ((RK_S32)p_last->frame_num == p->pic_num) {
                 if (((p->structure == TOP_FIELD) && (p_last->is_used == 2))
                     || ((p->structure == BOTTOM_FIELD) && (p_last->is_used == 1))) {

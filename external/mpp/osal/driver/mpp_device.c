@@ -18,11 +18,13 @@
 
 #include <string.h>
 
+#include "mpp_env.h"
 #include "mpp_log.h"
 #include "mpp_mem.h"
-#include "mpp_platform.h"
+#include "mpp_common.h"
 
-#include "mpp_device.h"
+#include "mpp_platform.h"
+#include "mpp_device_debug.h"
 #include "mpp_service_api.h"
 #include "vcodec_service_api.h"
 
@@ -33,12 +35,16 @@ typedef struct MppDevImpl_t {
     const MppDevApi *api;
 } MppDevImpl;
 
+RK_U32 mpp_device_debug = 0;
+
 MPP_RET mpp_dev_init(MppDev *ctx, MppClientType type)
 {
     if (NULL == ctx) {
         mpp_err_f("found NULL input ctx\n");
         return MPP_ERR_NULL_PTR;
     }
+
+    mpp_env_get_u32("mpp_device_debug", &mpp_device_debug, 0);
 
     *ctx = NULL;
 
@@ -129,6 +135,10 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
         if (api->reg_offset)
             ret = api->reg_offset(impl_ctx, param);
     } break;
+    case MPP_DEV_RCB_INFO : {
+        if (api->rcb_info)
+            ret = api->rcb_info(impl_ctx, param);
+    } break;
     case MPP_DEV_SET_INFO : {
         if (api->set_info)
             ret = api->set_info(impl_ctx, param);
@@ -147,4 +157,16 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
     }
 
     return ret;
+}
+
+MPP_RET mpp_dev_set_reg_offset(MppDev dev, RK_S32 index, RK_U32 offset)
+{
+    MppDevRegOffsetCfg trans_cfg;
+
+    trans_cfg.reg_idx = index;
+    trans_cfg.offset = offset;
+
+    mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
+
+    return MPP_OK;
 }

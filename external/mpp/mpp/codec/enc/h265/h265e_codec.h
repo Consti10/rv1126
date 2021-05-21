@@ -44,7 +44,6 @@
 #define H265E_SEI_BUF_SIZE          1024
 #define H265E_EXTRA_INFO_BUF_SIZE   (H265E_PS_BUF_SIZE + H265E_SEI_BUF_SIZE)
 
-
 extern RK_U32 h265e_debug;
 
 #define h265e_dbg(flag, fmt, ...)   _mpp_dbg(h265e_debug, flag, fmt, ## __VA_ARGS__)
@@ -63,8 +62,6 @@ extern RK_U32 h265e_debug;
 
 typedef struct H265eCtx_t {
     MppEncCfgSet        *cfg;
-    MppDeviceId         dev_id;
-    MppRateControl      *rc;
     RK_U32              rc_ready;
     RK_S32              idr_request;
 

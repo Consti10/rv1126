@@ -18,11 +18,26 @@
 
 #include "mpp_log.h"
 #include "mpp_platform.h"
+#include "vcodec_service.h"
 
 int main()
 {
     const char *dev = NULL;
     RK_U32 vcodec_type = mpp_get_vcodec_type();
+    MppKernelVersion kernel_version = mpp_get_kernel_version();
+    MppIoctlVersion ioctl_version = mpp_get_ioctl_version();
+
+    mpp_log("kernel version: %s\n",
+            kernel_version == KERNEL_UNKNOWN ? "unknown" :
+            kernel_version == KERNEL_3_10    ? "3.10"    :
+            kernel_version == KERNEL_4_4     ? "4.4"     :
+            kernel_version == KERNEL_4_19    ? "4.19"    :
+            NULL);
+    mpp_log("ioctl  version: %s\n",
+            ioctl_version == IOCTL_VCODEC_SERVICE ? "vcodec_service" :
+            ioctl_version == IOCTL_MPP_SERVICE_V1 ? "mpp_service"    :
+            "unknown");
+    mpp_log("\n");
 
     mpp_log("chip name: %s\n", mpp_get_soc_name());
     mpp_log("\n");
@@ -35,13 +50,16 @@ int main()
         mpp_log("found vpu2 codec\n");
 
     if (vcodec_type & HAVE_HEVC_DEC)
-        mpp_log("found RK hevc decoder\n");
+        mpp_log("found rk hevc decoder\n");
 
     if (vcodec_type & HAVE_RKVDEC)
         mpp_log("found rkvdec decoder\n");
 
     if (vcodec_type & HAVE_AVSDEC)
         mpp_log("found avs+ decoder\n");
+
+    if (vcodec_type & HAVE_JPEG_DEC)
+        mpp_log("found rk jpeg decoder\n");
 
     if (vcodec_type & HAVE_RKVENC)
         mpp_log("found rkvenc encoder\n");

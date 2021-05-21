@@ -75,8 +75,8 @@ _CAPI MEDIA_BUFFER RK_MPI_SYS_GetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID,
  ********************************************************************/
 _CAPI RK_S32 RK_MPI_VI_SetChnAttr(VI_PIPE ViPipe, VI_CHN ViChn,
                                   const VI_CHN_ATTR_S *pstChnAttr);
-_CAPI RK_S32 RK_MPI_VI_DisableChn(VI_PIPE ViPipe, VI_CHN ViChn);
 _CAPI RK_S32 RK_MPI_VI_EnableChn(VI_PIPE ViPipe, VI_CHN ViChn);
+_CAPI RK_S32 RK_MPI_VI_DisableChn(VI_PIPE ViPipe, VI_CHN ViChn);
 _CAPI RK_S32 RK_MPI_VI_StartRegionLuma(VI_CHN ViChn);
 _CAPI RK_S32 RK_MPI_VI_StopRegionLuma(VI_CHN ViChn);
 _CAPI RK_S32 RK_MPI_VI_GetChnRegionLuma(
@@ -89,8 +89,14 @@ _CAPI RK_S32 RK_MPI_VI_StartStream(VI_PIPE ViPipe, VI_CHN ViChn);
  ********************************************************************/
 _CAPI RK_S32 RK_MPI_VENC_CreateChn(VENC_CHN VeChn,
                                    VENC_CHN_ATTR_S *stVencChnAttr);
+_CAPI RK_S32 RK_MPI_VENC_GetVencChnAttr(VENC_CHN VeChn,
+                                        VENC_CHN_ATTR_S *stVencChnAttr);
+_CAPI RK_S32 RK_MPI_VENC_SetVencChnAttr(VENC_CHN VeChn,
+                                        VENC_CHN_ATTR_S *stVencChnAttr);
 _CAPI RK_S32 RK_MPI_VENC_CreateJpegLightChn(VENC_CHN VeChn,
                                             VENC_CHN_ATTR_S *stVencChnAttr);
+_CAPI RK_S32 RK_MPI_VENC_GetRcParam(VENC_CHN VeChn,
+                                    VENC_RC_PARAM_S *pstRcParam);
 _CAPI RK_S32 RK_MPI_VENC_SetRcParam(VENC_CHN VeChn,
                                     const VENC_RC_PARAM_S *pstRcParam);
 _CAPI RK_S32 RK_MPI_VENC_SetJpegParam(VENC_CHN VeChn,
@@ -111,6 +117,10 @@ _CAPI RK_S32 RK_MPI_VENC_InsertUserData(VENC_CHN VeChn, RK_U8 *pu8Data,
                                         RK_U32 u32Len);
 _CAPI RK_S32 RK_MPI_VENC_SetResolution(
     VENC_CHN VeChn, VENC_RESOLUTION_PARAM_S stResolutionParam);
+
+_CAPI RK_S32 RK_MPI_VENC_GetRoiAttr(VENC_CHN VeChn,
+                                    VENC_ROI_ATTR_S *pstRoiAttr,
+                                    RK_S32 roi_index);
 _CAPI RK_S32 RK_MPI_VENC_SetRoiAttr(VENC_CHN VeChn,
                                     const VENC_ROI_ATTR_S *pstRoiAttr,
                                     RK_S32 region_cnt);
@@ -132,7 +142,8 @@ _CAPI RK_S32 RK_MPI_VENC_RGN_SetPaletteId(
 _CAPI RK_S32 RK_MPI_VENC_StartRecvFrame(
     VENC_CHN VeChn, const VENC_RECV_PIC_PARAM_S *pstRecvParam);
 _CAPI RK_S32 RK_MPI_VENC_DestroyChn(VENC_CHN VeChn);
-
+_CAPI RK_S32 RK_MPI_VENC_GetFd(VENC_CHN VeChn);
+_CAPI RK_S32 RK_MPI_VENC_QueryStatus(VENC_CHN VeChn, VENC_CHN_STATUS_S *pstStatus);
 /********************************************************************
  * Ai api
  ********************************************************************/

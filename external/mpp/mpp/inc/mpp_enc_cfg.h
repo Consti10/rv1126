@@ -29,9 +29,14 @@
  * For normal user rc and prep config are enough.
  */
 typedef struct MppEncCfgSet_t {
+    MppEncBaseCfg       base;
+
     // esential config
     MppEncPrepCfg       prep;
     MppEncRcCfg         rc;
+
+    // hardware related config
+    MppEncHwCfg         hw;
 
     // codec detail config
     MppEncCodecCfg      codec;
@@ -42,16 +47,5 @@ typedef struct MppEncCfgSet_t {
     MppEncOSDPltCfg     plt_cfg;
     MppEncOSDPlt        plt_data;
 } MppEncCfgSet;
-
-/*
- * MppEncCfgApi is the function set for configure MppEncCfgSet by name
- */
-typedef struct MppEncCfgApi_t {
-    const char          *name;
-    RK_S32              type_set;
-    RK_S32              type_get;
-    void                *api_set;
-    void                *api_get;
-} MppEncCfgApi;
 
 #endif /*__MPP_ENC_CFG_H__*/

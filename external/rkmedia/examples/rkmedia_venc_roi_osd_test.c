@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -112,7 +113,9 @@ static int EnableRoi(RK_U16 u16VencChn, RECT_S stRect) {
   stRoiAttr.u32Index = 0;
   stRoiAttr.s32Qp = 6;
   stRoiAttr.bIntra = RK_FALSE;
-  return RK_MPI_VENC_SetRoiAttr(u16VencChn, &stRoiAttr, 1);
+  int ret = RK_MPI_VENC_SetRoiAttr(u16VencChn, &stRoiAttr, 1);
+  printf("set roi : %d\n", ret);
+  return ret;
 }
 
 int StreamOn(int width, int height, const char *video_node, int vi_chn,
@@ -127,7 +130,7 @@ int StreamOn(int width, int height, const char *video_node, int vi_chn,
   CODEC_TYPE_E codec_type = RK_CODEC_TYPE_H264;
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = video_node;
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = width;
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -219,7 +222,13 @@ int StreamOff(int vi_chn, int venc_chn) {
   return 0;
 }
 
-static char optstr[] = "?:a:";
+static RK_CHAR optstr[] = "?:a::h";
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"help", no_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0},
+};
+
 static void print_usage(char *name) {
   printf("#Function description:\n");
   printf("In the case of multiple streams, verify the effect of roi and osd at "
@@ -230,39 +239,52 @@ static void print_usage(char *name) {
   printf("  SubStream1: rkispp_scale2: 1280x720 NV12 -> /userdata/sub1.h264\n");
   printf("#Usage Example: \n");
   printf("  %s [-a /etc/iqfiles]\n", name);
-  printf("  @[-a] the path of iqfiles. default: NULL\n");
+  printf("  @[-a] the dirpath of iqfiles. set dirpath empty to using "
+         "path:\"/oem/etc/iqfiles/\", default: NULL\n");
   printf("  %s [-?]\n", name);
 }
 
 int main(int argc, char *argv[]) {
+  char *iq_file_dir = NULL;
   int c = 0;
-
   opterr = 1;
-  const char *iq_file_dir = NULL;
-  while ((c = getopt(argc, argv, optstr)) != -1) {
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    const char *tmp_optarg = optarg;
     switch (c) {
     case 'a':
-      iq_file_dir = optarg;
-      printf("#IN ARGS: path of iqfiles: %s\n", iq_file_dir);
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        iq_file_dir = (char *)tmp_optarg;
+      } else {
+        iq_file_dir = "/oem/etc/iqfiles";
+      }
       break;
+    case 'h':
+      print_usage(argv[0]);
+      return 0;
     case '?':
     default:
       print_usage(argv[0]);
-      exit(0);
+      return 0;
     }
   }
 
   printf(">>>>>>>>>>>>>>> Test START <<<<<<<<<<<<<<<<<<<<<<\n");
-  RK_MPI_SYS_Init();
+  if (iq_file_dir) {
 #ifdef RKAIQ
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RK_BOOL fec_enable = RK_FALSE;
-  int fps = 30;
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
+    printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+    RK_BOOL fec_enable = RK_FALSE;
+    int fps = 30;
+    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
+    SAMPLE_COMM_ISP_Run();
+    SAMPLE_COMM_ISP_SetFrameRate(fps);
 #endif
+  }
 
+  RK_MPI_SYS_Init();
   g_save_file = fopen("/data/main.h264", "w");
   if (StreamOn(1920, 1080, "rkispp_scale0", 0, 0)) {
     printf("ERROR: StreamOn failed!\n");
@@ -334,9 +356,11 @@ int main(int argc, char *argv[]) {
     usleep(100);
   }
 
+  if (iq_file_dir) {
 #ifdef RKAIQ
-  SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
 #endif
+  }
 
   StreamOff(0, 0);
   StreamOff(1, 1);

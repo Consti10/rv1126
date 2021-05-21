@@ -36,8 +36,7 @@
 #define MPP_FLAGS_LAST_MSG          (0x00000002)
 #define MPP_FLAGS_REG_FD_NO_TRANS   (0x00000004)
 #define MPP_FLAGS_SCL_FD_NO_TRANS   (0x00000008)
-#define MPP_FLAGS_LINK_MODE_FIX     (0x00000010)
-#define MPP_FLAGS_LINK_MODE_UPDATE  (0x00000020)
+#define MPP_FLAGS_REG_OFFSET_ALONE  (0x00000010)
 #define MPP_FLAGS_SECURE_MODE       (0x00010000)
 
 /* mpp service capability description */
@@ -73,6 +72,7 @@ typedef enum MppServiceCmdType_e {
     MPP_CMD_SET_REG_WRITE           = MPP_CMD_SEND_BASE + 0,
     MPP_CMD_SET_REG_READ            = MPP_CMD_SEND_BASE + 1,
     MPP_CMD_SET_REG_ADDR_OFFSET     = MPP_CMD_SEND_BASE + 2,
+    MPP_CMD_SET_RCB_INFO            = MPP_CMD_SEND_BASE + 3,
     MPP_CMD_SEND_BUTT,
 
     MPP_CMD_POLL_BASE               = 0x300,
@@ -88,11 +88,6 @@ typedef enum MppServiceCmdType_e {
 
     MPP_CMD_BUTT,
 } MppServiceCmdType;
-
-typedef struct MppReq_t {
-    RK_U32 *req;
-    RK_U32  size;
-} MppReq;
 
 typedef struct mppReqV1_t {
     RK_U32 cmd;
@@ -116,6 +111,8 @@ extern "C" {
 #endif
 
 void check_mpp_service_cap(RK_U32 *codec_type, RK_U32 *hw_ids, MppServiceCmdCap *cap);
+const MppServiceCmdCap *mpp_get_mpp_service_cmd_cap(void);
+const char *mpp_get_mpp_service_name(void);
 
 #ifdef  __cplusplus
 }

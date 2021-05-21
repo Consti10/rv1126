@@ -21,12 +21,18 @@ typedef enum rkVI_CHN_WORK_MODE {
   VI_WORK_MODE_GOD_MODE,
 } VI_CHN_WORK_MODE;
 
+typedef enum rkVI_CHN_BUF_TYPE {
+  VI_CHN_BUF_TYPE_DMA = 0, // Default
+  VI_CHN_BUF_TYPE_MMAP,
+} VI_CHN_BUF_TYPE;
+
 typedef struct rkVI_CHN_ATTR_S {
   const RK_CHAR *pcVideoNode;
   RK_U32 u32Width;
   RK_U32 u32Height;
   IMAGE_TYPE_E enPixFmt;
   RK_U32 u32BufCnt; // VI capture video buffer cnt.
+  VI_CHN_BUF_TYPE enBufType; // VI capture video buffer type.
   VI_CHN_WORK_MODE enWorkMode;
 } VI_CHN_ATTR_S;
 

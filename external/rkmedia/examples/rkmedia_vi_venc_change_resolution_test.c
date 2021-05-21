@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "librtsp/rtsp_demo.h"
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,52 +18,19 @@
 #include "rkmedia_api.h"
 #include "rkmedia_venc.h"
 
-static FILE *g_save_file;
-static FILE *g_save_file_sub0;
-static FILE *g_save_file_sub1;
+#define MAIN_ORDER 0
+#define SUB_ORDER 1
+#define THIRD_ORDER 2
+
+rtsp_demo_handle g_rtsplive = NULL;
+static rtsp_session_handle g_rtsp_session[3];
+static FILE *g_save_file[3];
 static bool quit = false;
+static int g_buf_flag = 0;
+
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
   quit = true;
-}
-
-void video_packet_cb(MEDIA_BUFFER mb) {
-#if 0
-  const char *nalu_type = "Unknow";
-  switch (RK_MPI_MB_GetFlag(mb)) {
-  case VENC_NALU_IDRSLICE:
-    nalu_type = "IDR Slice";
-    break;
-  case VENC_NALU_PSLICE:
-    nalu_type = "P Slice";
-    break;
-  default:
-    break;
-  }
-
-  printf("Get Video Encoded packet(%s):ptr:%p, fd:%d, size:%zu, mode:%d\n",
-         nalu_type, RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb),
-         RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetModeID(mb));
-#endif
-
-  if (g_save_file)
-    fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file);
-
-  RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-void video_packet_cb_sub0(MEDIA_BUFFER mb) {
-  static int packet_cnt_sub0 = 0;
-  if (g_save_file_sub0 && (packet_cnt_sub0++ < 150))
-    fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file_sub0);
-  RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-void video_packet_cb_sub1(MEDIA_BUFFER mb) {
-  static int packet_cnt_sub1 = 0;
-  if (g_save_file_sub0 && (packet_cnt_sub1++ < 150))
-    fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file_sub1);
-  RK_MPI_MB_ReleaseBuffer(mb);
 }
 
 int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
@@ -81,7 +51,7 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
 
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = video_node;
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = width;
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = img_type;
@@ -96,7 +66,7 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
   if (img_type == IMAGE_TYPE_FBC0) {
     printf("TEST: INFO: FBC0 use rkispp_scale0 for luma caculation!\n");
     vi_chn_attr.pcVideoNode = "rkispp_scale0";
-    vi_chn_attr.u32BufCnt = 4;
+    vi_chn_attr.u32BufCnt = 3;
     vi_chn_attr.u32Width = 1280;
     vi_chn_attr.u32Height = 720;
     vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -151,12 +121,6 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
   stRecvParam.s32RecvPicNum = 0;
   RK_MPI_VENC_StartRecvFrame(3, &stRecvParam);
 
-  MPP_CHN_S stEncChn;
-  stEncChn.enModId = RK_ID_VENC;
-  stEncChn.s32DevId = 0;
-  stEncChn.s32ChnId = 0;
-  RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb);
-
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
   stSrcChn.s32DevId = 0;
@@ -179,7 +143,6 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
   }
 
   printf("%s initial finish\n", __func__);
-  signal(SIGINT, sigterm_handler);
 
   int loop_cnt = sec * 2;
   RECT_S stRects[2] = {{0, 0, 256, 256}, {256, 256, 256, 256}};
@@ -217,11 +180,31 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
       break;
   }
 
+  return 0;
+}
+
+int StreamOff(IMAGE_TYPE_E img_type) {
   printf("%s exit!\n", __func__);
+  MPP_CHN_S stSrcChn;
+  stSrcChn.enModId = RK_ID_VI;
+  stSrcChn.s32DevId = 0;
+  stSrcChn.s32ChnId = 0;
+  MPP_CHN_S stDestChn;
+  stDestChn.enModId = RK_ID_VENC;
+  stDestChn.s32DevId = 0;
   stDestChn.s32ChnId = 0;
-  RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+
+  int ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+  if (ret) {
+    printf("ERROR: unbind vi[0] -> venc[0] failed!\n");
+    return -1;
+  }
   stDestChn.s32ChnId = 3;
-  RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+  if (ret) {
+    printf("ERROR: unbind vi[0] -> venc[3] failed!\n");
+    return -1;
+  }
 
   RK_MPI_VENC_DestroyChn(0); // avc/hevc
   RK_MPI_VENC_DestroyChn(3); // jpeg
@@ -231,7 +214,6 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
     RK_MPI_VI_DisableChn(0, 3);
   }
   printf("\n-------------------END----------------------------\n");
-
   return 0;
 }
 
@@ -247,7 +229,7 @@ int SubStreamOn(int width, int height, const char *video_node, int vi_chn,
   CODEC_TYPE_E codec_type = RK_CODEC_TYPE_H264;
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = video_node;
-  vi_chn_attr.u32BufCnt = 4;
+  vi_chn_attr.u32BufCnt = 3;
   vi_chn_attr.u32Width = width;
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
@@ -279,15 +261,6 @@ int SubStreamOn(int width, int height, const char *video_node, int vi_chn,
     printf("Create avc failed! ret=%d\n", ret);
     return -1;
   }
-
-  MPP_CHN_S stEncChn;
-  stEncChn.enModId = RK_ID_VENC;
-  stEncChn.s32DevId = 0;
-  stEncChn.s32ChnId = venc_chn;
-  if (sub_stream_cnt == 0)
-    RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb_sub0);
-  else
-    RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb_sub1);
 
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
@@ -328,14 +301,53 @@ int SubStreamOff(int vi_chn, int venc_chn) {
     return -1;
   }
 
-  RK_MPI_VI_DisableChn(0, vi_chn);
-  RK_MPI_VENC_DestroyChn(venc_chn);
+  ret = RK_MPI_VI_DisableChn(0, vi_chn);
+  if (ret) {
+    printf("ERROR: disable vi[%d] failed, ret: %d\n", vi_chn, ret);
+    return -1;
+  }
+  ret = RK_MPI_VENC_DestroyChn(venc_chn);
+  if (ret) {
+    printf("ERROR: disable venc[%d] failed, ret: %d\n", vi_chn, ret);
+    return -1;
+  }
   printf("*** SubStreamOff: END....\n");
 
   return 0;
 }
 
-static char optstr[] = "?:c:s:w:h:a:";
+static void *GetStreamThread() {
+  while (g_buf_flag && !quit) {
+    for (int i = 0; i < 3; i++) {
+      MEDIA_BUFFER buffer;
+      buffer = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, i, 0);
+      if (buffer) {
+        rtsp_tx_video(g_rtsp_session[i], RK_MPI_MB_GetPtr(buffer),
+                      RK_MPI_MB_GetSize(buffer),
+                      RK_MPI_MB_GetTimestamp(buffer));
+        if (g_save_file[i])
+          fwrite(RK_MPI_MB_GetPtr(buffer), 1, RK_MPI_MB_GetSize(buffer),
+                 g_save_file[i]);
+        // printf("cms buf:%p, size:%d, tm:%lld\n", RK_MPI_MB_GetPtr(buffer),
+        // RK_MPI_MB_GetSize(buffer), RK_MPI_MB_GetTimestamp(buffer));
+        RK_MPI_MB_ReleaseBuffer(buffer);
+      }
+    }
+    rtsp_do_event(g_rtsplive);
+  }
+  return NULL;
+}
+
+static char optstr[] = "?:c:s:w:h:a::";
+
+static const struct option long_options[] = {
+    {"aiq", optional_argument, NULL, 'a'},
+    {"count", required_argument, NULL, 'c'},
+    {"seconds", required_argument, NULL, 's'},
+    {"width", required_argument, NULL, 'w'},
+    {"height", required_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0},
+};
 
 static void print_usage(char *name) {
   printf("#Function description:\n");
@@ -362,13 +374,14 @@ static void print_usage(char *name) {
 int main(int argc, char *argv[]) {
   int loop_cnt = 20;
   int loop_seconds = 5; // 5s
-  int width = 3840;
-  int height = 2160;
-  const char *iq_file_dir = NULL;
+  int width = 2688;
+  int height = 1520;
+  char *iq_file_dir = NULL;
 
   int c = 0;
   opterr = 1;
-  while ((c = getopt(argc, argv, optstr)) != -1) {
+  while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    const char *tmp_optarg = optarg;
     switch (c) {
     case 'c':
       loop_cnt = atoi(optarg);
@@ -380,16 +393,21 @@ int main(int argc, char *argv[]) {
       break;
     case 'w':
       width = atoi(optarg);
-      ;
       printf("#IN ARGS: bypass width: %d\n", width);
       break;
     case 'h':
       height = atoi(optarg);
-      ;
       printf("#IN ARGS: bypass height: %d\n", height);
       break;
     case 'a':
-      iq_file_dir = optarg;
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        iq_file_dir = (char *)tmp_optarg;
+      } else {
+        iq_file_dir = "/oem/etc/iqfiles";
+      }
       printf("#IN ARGS: the path of iqfiles: %s\n", iq_file_dir);
       break;
     case '?':
@@ -404,54 +422,109 @@ int main(int argc, char *argv[]) {
   printf("-->LoopSeconds:%d\n", loop_seconds);
   printf("-->BypassWidth:%d\n", width);
   printf("-->BypassHeight:%d\n", height);
+  printf("-->aiq xml dirpath:%s\n", iq_file_dir);
+
+  g_rtsplive = create_rtsp_demo(554);
+  g_rtsp_session[MAIN_ORDER] =
+      rtsp_new_session(g_rtsplive, "/live/main_stream");
+  g_rtsp_session[SUB_ORDER] = rtsp_new_session(g_rtsplive, "/live/sub_stream");
+  g_rtsp_session[THIRD_ORDER] =
+      rtsp_new_session(g_rtsplive, "/live/third_stream");
+  rtsp_set_video(g_rtsp_session[MAIN_ORDER], RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
+  rtsp_set_video(g_rtsp_session[SUB_ORDER], RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
+  rtsp_set_video(g_rtsp_session[THIRD_ORDER], RTSP_CODEC_ID_VIDEO_H264, NULL,
+                 0);
+  rtsp_sync_video_ts(g_rtsp_session[MAIN_ORDER], rtsp_get_reltime(),
+                     rtsp_get_ntptime());
+  rtsp_sync_video_ts(g_rtsp_session[SUB_ORDER], rtsp_get_reltime(),
+                     rtsp_get_ntptime());
+  rtsp_sync_video_ts(g_rtsp_session[THIRD_ORDER], rtsp_get_reltime(),
+                     rtsp_get_ntptime());
 
   RK_MPI_SYS_Init();
-#ifdef RKAIQ
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RK_BOOL fec_enable = RK_FALSE;
-  int fps = 30;
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
-#endif
-  g_save_file_sub0 = fopen("/tmp/sub0.h264", "w");
-  if (SubStreamOn(720, 480, "rkispp_scale1", 1, 1)) {
-    printf("ERROR: SubStreamOn failed!\n");
-    return -1;
-  }
+  signal(SIGINT, sigterm_handler);
 
-  g_save_file_sub1 = fopen("/tmp/sub1.h264", "w");
-  if (SubStreamOn(1280, 720, "rkispp_scale2", 2, 2)) {
-    printf("ERROR: SubStreamOn failed!\n");
-    return -1;
-  }
-
+  IMAGE_TYPE_E img_type_used;
   for (int i = 0; !quit && (i < loop_cnt); i++) {
-    g_save_file = fopen("/tmp/fbc0.h264", "w");
-    if (StreamOn(width, height, IMAGE_TYPE_FBC0, "rkispp_m_bypass",
-                 loop_seconds)) {
-      printf("ERROR: StreamOn 2k failed!\n");
-      break;
+    if (iq_file_dir) {
+#ifdef RKAIQ
+      rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+      RK_BOOL fec_enable = RK_FALSE;
+      int fps = 30;
+      SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
+      SAMPLE_COMM_ISP_Run();
+      SAMPLE_COMM_ISP_SetFrameRate(fps);
+#endif
     }
-    fclose(g_save_file);
-    g_save_file = NULL;
+    g_save_file[SUB_ORDER] = fopen("/tmp/sub0.h264", "w");
+    if (SubStreamOn(720, 480, "rkispp_scale1", 1, 1)) {
+      printf("ERROR: SubStreamOn failed!\n");
+      quit = true;
+    }
 
-    g_save_file = fopen("/tmp/720p.h264", "w");
-    if (StreamOn(1280, 720, IMAGE_TYPE_NV12, "rkispp_scale0", loop_seconds)) {
-      printf("ERROR: StreamOn 720p failed!\n");
-      break;
+    g_save_file[THIRD_ORDER] = fopen("/tmp/sub1.h264", "w");
+    if (SubStreamOn(1280, 720, "rkispp_scale2", 2, 2)) {
+      printf("ERROR: SubStreamOn failed!\n");
+      quit = true;
     }
-    fclose(g_save_file);
-    g_save_file = NULL;
+
+    pthread_t stream_thread;
+    g_buf_flag = 1;
+    pthread_create(&stream_thread, NULL, GetStreamThread, NULL);
+
+    // mainstream switch
+    if (i % 2 == 0) {
+      g_save_file[MAIN_ORDER] = fopen("/tmp/fbc0.h264", "w");
+      img_type_used = IMAGE_TYPE_FBC0;
+      if (StreamOn(width, height, IMAGE_TYPE_FBC0, "rkispp_m_bypass",
+                   loop_seconds)) {
+        printf("ERROR: StreamOn 2k failed!, w:%d, h:%d\n", width, height);
+        quit = true;
+      }
+    } else {
+      g_save_file[MAIN_ORDER] = fopen("/tmp/720p.h264", "w");
+      img_type_used = IMAGE_TYPE_NV12;
+      if (StreamOn(1280, 720, IMAGE_TYPE_NV12, "rkispp_scale0", loop_seconds)) {
+        printf("ERROR: StreamOn 720p failed!\n");
+        quit = true;
+      }
+    }
+
+    g_buf_flag = 0;
+    // close isp before vi
+    if (iq_file_dir) {
+#ifdef RKAIQ
+      SAMPLE_COMM_ISP_Stop();
+#endif
+    }
+
+    if (StreamOff(img_type_used)) {
+      printf("ERROR: StreamOff failed!\n");
+      quit = true;
+    }
+
+    if (SubStreamOff(1, 1)) {
+      printf("ERROR: SubStreamOff 1 failed!\n");
+      quit = true;
+    }
+
+    if (SubStreamOff(2, 2)) {
+      printf("ERROR: SubStreamOff 2 failed!\n");
+      quit = true;
+    }
+
+    for (int j = 0; j < 3; j++) {
+      fclose(g_save_file[j]);
+      g_save_file[j] = NULL;
+    }
   }
 
-  if (g_save_file)
-    fclose(g_save_file);
-
-  SubStreamOff(1, 1);
-  SubStreamOff(2, 2);
-  fclose(g_save_file_sub0);
-  fclose(g_save_file_sub1);
+  for (int i = 0; i < 3; i++) {
+    if (g_save_file[i]) {
+      fclose(g_save_file[i]);
+    }
+  }
+  rtsp_del_demo(g_rtsplive);
   printf(">>>>>>>>>>>>>>> Test END <<<<<<<<<<<<<<<<<<<<<<\n");
   return 0;
 }

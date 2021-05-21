@@ -176,7 +176,8 @@ int DRMOutPutStream::Open() {
   if (!GetAgreeableIDSet())
     return -1;
 
-  if (!active) {
+  {
+    // Set Crtc
     drmModeAtomicReq *req;
     uint32_t blob_id;
     uint32_t property_crtc_id;
@@ -187,9 +188,7 @@ int DRMOutPutStream::Open() {
     property_active = get_property_id(res, DRM_MODE_OBJECT_CRTC, crtc_id, "ACTIVE");
     property_mode_id = get_property_id(res, DRM_MODE_OBJECT_CRTC, crtc_id, "MODE_ID");
 
-    auto dmc = get_connector_by_id(res, connector_id);
-    drmModeCreatePropertyBlob(fd, &dmc->modes[cur_mode_idx],
-          sizeof(dmc->modes[cur_mode_idx]), &blob_id);
+    drmModeCreatePropertyBlob(fd, &cur_mode, sizeof(cur_mode), &blob_id);
 
     req = drmModeAtomicAlloc();
     drmModeAtomicAddProperty(req, crtc_id, property_active, 1);
@@ -202,6 +201,7 @@ int DRMOutPutStream::Open() {
       return ret;
     }
   }
+
   // get property ids
   std::map<const char *, uint32_t *> plane_prop_id_map = {
       {KEY_CRTC_ID, &plane_prop_ids.crtc_id},
