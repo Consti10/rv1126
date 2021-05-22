@@ -450,6 +450,9 @@ MPP_RET Mpp::put_frame(MppFrame frame)
     MPP_RET ret = MPP_NOK;
     MppStopwatch stopwatch = NULL;
 
+    //Consti10
+    mpp_debug = MPP_DBG_TIMING;
+
     if (mpp_debug & MPP_DBG_TIMING) {
         mpp_frame_set_stopwatch_enable(frame, 1);
         stopwatch = mpp_frame_get_stopwatch(frame);

@@ -194,6 +194,8 @@ static MPP_RET mpi_encode(MppCtx ctx, MppFrame frame, MppPacket *packet)
     MPP_RET ret = MPP_NOK;
     MpiImpl *p = (MpiImpl *)ctx;
 
+    mpp_err_f("Consti10:MPI:mpi_encode\n");
+
     mpi_dbg_func("enter ctx %p frame %p packet %p\n", ctx, frame, packet);
     do {
         ret = check_mpp_ctx(p);

@@ -452,6 +452,9 @@ int MPPEncoder::Process(MppFrame frame, MppPacket &packet, MppBuffer &mv_buf) {
   MppCtx ctx = mpp_ctx->ctx;
   MppApi *mpi = mpp_ctx->mpi;
 
+    LOG("Consti10:MPPEncoder::Process\n");
+    //printk("Consti10:MPPEncoder::Process\n");
+
   if (mv_buf)
     LOG("TODO move detection frome mpp encoder...\n");
 

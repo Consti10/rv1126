@@ -1948,6 +1948,8 @@ static int imx415_set_ctrl(struct v4l2_ctrl *ctrl)
 	int ret = 0;
 	u32 shr0 = 0;
 
+    //printk("Consti10:imx415_set_ctrl\n");
+
 	/* Propagate change of current control to all related controls */
 	switch (ctrl->id) {
 	case V4L2_CID_VBLANK:
@@ -2064,6 +2066,8 @@ static const struct v4l2_ctrl_ops imx415_ctrl_ops = {
 
 static int imx415_initialize_controls(struct imx415 *imx415)
 {
+    //printk("Consti10:imx415_initialize_controls\n");
+
 	const struct imx415_mode *mode;
 	struct v4l2_ctrl_handler *handler;
 	s64 exposure_max, vblank_def;
