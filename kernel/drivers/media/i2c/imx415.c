@@ -919,8 +919,9 @@ static void imx415_change_mode(struct imx415 *imx415, const struct imx415_mode *
 {
 	imx415->cur_mode = mode;
 	imx415->cur_vts = imx415->cur_mode->vts_def;
-	dev_dbg(&imx415->client->dev, "set fmt: cur_mode: %dx%d, hdr: %d\n",
-		mode->width, mode->height, mode->hdr_mode);
+	// more debugging added by Consti10
+	dev_dbg(&imx415->client->dev, "set fmt: cur_mode: %dx%d, hdr: %d bus_fmt: %d maxFps: %d,%d\n",
+		mode->width, mode->height, mode->hdr_mode,mode->bus_fmt,mode->max_fps.numerator,mode->max_fps.denominator);
 }
 
 static int imx415_set_fmt(struct v4l2_subdev *sd,
