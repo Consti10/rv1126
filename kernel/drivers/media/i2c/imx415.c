@@ -933,6 +933,8 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 	s64 h_blank, vblank_def, vblank_min;
 	u64 pixel_rate = 0;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
 	mutex_lock(&imx415->mutex);
 
 	mode = imx415_find_best_fit(imx415, fmt);
@@ -975,9 +977,12 @@ static int imx415_get_fmt(struct v4l2_subdev *sd,
 {
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode = imx415->cur_mode;
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	mutex_lock(&imx415->mutex);
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+        dev_dbg(&imx415->client->dev, "Consti10: 1\n");
+
 #ifdef CONFIG_VIDEO_V4L2_SUBDEV_API
 		fmt->format = *v4l2_subdev_get_try_format(sd, cfg, fmt->pad);
 #else
@@ -985,6 +990,8 @@ static int imx415_get_fmt(struct v4l2_subdev *sd,
 		return -ENOTTY;
 #endif
 	} else {
+        dev_dbg(&imx415->client->dev, "Consti10: 2\n");
+
 		fmt->format.width = mode->width;
 		fmt->format.height = mode->height;
 		fmt->format.code = mode->bus_fmt;
@@ -1004,7 +1011,6 @@ static int imx415_enum_mbus_code(struct v4l2_subdev *sd,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct imx415 *imx415 = to_imx415(sd);
-
 	if (code->index != 0)
 		return -EINVAL;
 	code->code = imx415->cur_mode->bus_fmt;
@@ -1017,6 +1023,7 @@ static int imx415_enum_frame_sizes(struct v4l2_subdev *sd,
 				   struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct imx415 *imx415 = to_imx415(sd);
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	if (fse->index >= imx415->cfg_num)
 		return -EINVAL;
@@ -1037,6 +1044,7 @@ static int imx415_g_frame_interval(struct v4l2_subdev *sd,
 {
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode = imx415->cur_mode;
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	mutex_lock(&imx415->mutex);
 	fi->interval = mode->max_fps;
@@ -1051,6 +1059,7 @@ static int imx415_g_mbus_config(struct v4l2_subdev *sd,
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode = imx415->cur_mode;
 	u32 val = 0;
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	val = 1 << (IMX415_4LANES - 1) |
 	      V4L2_MBUS_CSI2_CHANNEL_0 |
@@ -1068,6 +1077,8 @@ static int imx415_g_mbus_config(struct v4l2_subdev *sd,
 static void imx415_get_module_inf(struct imx415 *imx415,
 				  struct rkmodule_inf *inf)
 {
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
 	memset(inf, 0, sizeof(*inf));
 	strlcpy(inf->base.sensor, IMX415_NAME, sizeof(inf->base.sensor));
 	strlcpy(inf->base.module, imx415->module_name,
@@ -1089,6 +1100,8 @@ static int imx415_set_hdrae_3frame(struct imx415 *imx415,
 	u32 fsc;
 	int rhs1_max = 0;
 	int shr2_min = 0;
+
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	if (!imx415->has_init_exp && !imx415->streaming) {
 		imx415->init_hdrae_exp = *ae;
@@ -1321,6 +1334,8 @@ static int imx415_set_hdrae(struct imx415 *imx415,
 	int ret = 0;
 	u32 fsc;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
 	if (!imx415->has_init_exp && !imx415->streaming) {
 		imx415->init_hdrae_exp = *ae;
 		imx415->has_init_exp = true;
@@ -1463,6 +1478,9 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	long ret = 0;
 	const struct imx415_mode *mode;
 	u64 pixel_rate = 0;
+
+    dev_dbg(&imx415->client->dev, "Consti10: Got command:%d\n",cmd);
+
 
 	switch (cmd) {
 	case PREISP_CMD_SET_HDRAE_EXP:
@@ -1634,7 +1652,7 @@ static long imx415_compat_ioctl32(struct v4l2_subdev *sd,
 static int __imx415_start_stream(struct imx415 *imx415)
 {
 	int ret;
-
+	dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 	ret = imx415_write_array(imx415->client, imx415->cur_mode->global_reg_list);
 	if (ret)
 		return ret;
@@ -1661,6 +1679,8 @@ static int __imx415_start_stream(struct imx415 *imx415)
 
 static int __imx415_stop_stream(struct imx415 *imx415)
 {
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
 	imx415->has_init_exp = false;
 	return imx415_write_reg(imx415->client, IMX415_REG_CTRL_MODE,
 				IMX415_REG_VALUE_08BIT, 1);
@@ -1672,6 +1692,7 @@ static int imx415_s_stream(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = imx415->client;
 	int ret = 0;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 	dev_dbg(&imx415->client->dev, "s_stream: %d. %dx%d, hdr: %d, bpp: %d\n",
 	       on, imx415->cur_mode->width, imx415->cur_mode->height,
 	       imx415->cur_mode->hdr_mode, imx415->cur_mode->bpp);
@@ -1713,6 +1734,7 @@ static int imx415_s_power(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = imx415->client;
 	int ret = 0;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 	mutex_lock(&imx415->mutex);
 
 	if (imx415->power_on == !!on)
@@ -1741,6 +1763,7 @@ static int __imx415_power_on(struct imx415 *imx415)
 	int ret;
 	struct device *dev = &imx415->client->dev;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 	if (!IS_ERR_OR_NULL(imx415->pins_default)) {
 		ret = pinctrl_select_state(imx415->pinctrl,
 					   imx415->pins_default);
@@ -1796,6 +1819,8 @@ static void __imx415_power_off(struct imx415 *imx415)
 {
 	int ret;
 	struct device *dev = &imx415->client->dev;
+
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	if (!IS_ERR(imx415->reset_gpio))
 		gpiod_set_value_cansleep(imx415->reset_gpio, 1);
@@ -1858,6 +1883,7 @@ static int imx415_enum_frame_interval(struct v4l2_subdev *sd,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct imx415 *imx415 = to_imx415(sd);
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	if (fie->index >= imx415->cfg_num)
 		return -EINVAL;
@@ -1888,6 +1914,7 @@ static int imx415_get_selection(struct v4l2_subdev *sd,
 				struct v4l2_subdev_selection *sel)
 {
 	struct imx415 *imx415 = to_imx415(sd);
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	if (sel->target == V4L2_SEL_TGT_CROP_BOUNDS) {
 		sel->r.left = CROP_START(imx415->cur_mode->width, DST_WIDTH);
@@ -1941,6 +1968,7 @@ static const struct v4l2_subdev_ops imx415_subdev_ops = {
 
 static int imx415_set_ctrl(struct v4l2_ctrl *ctrl)
 {
+
 	struct imx415 *imx415 = container_of(ctrl->handler,
 					     struct imx415, ctrl_handler);
 	struct i2c_client *client = imx415->client;
@@ -1949,7 +1977,7 @@ static int imx415_set_ctrl(struct v4l2_ctrl *ctrl)
 	int ret = 0;
 	u32 shr0 = 0;
 
-    //printk("Consti10:imx415_set_ctrl\n");
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	/* Propagate change of current control to all related controls */
 	switch (ctrl->id) {
@@ -2067,14 +2095,14 @@ static const struct v4l2_ctrl_ops imx415_ctrl_ops = {
 
 static int imx415_initialize_controls(struct imx415 *imx415)
 {
-    //printk("Consti10:imx415_initialize_controls\n");
-
 	const struct imx415_mode *mode;
 	struct v4l2_ctrl_handler *handler;
 	s64 exposure_max, vblank_def;
 	u64 pixel_rate;
 	u32 h_blank;
 	int ret;
+
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	handler = &imx415->ctrl_handler;
 	mode = imx415->cur_mode;
@@ -2146,6 +2174,7 @@ static int imx415_check_sensor_id(struct imx415 *imx415,
 	struct device *dev = &imx415->client->dev;
 	u32 id = 0;
 	int ret;
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	ret = imx415_read_reg(client, IMX415_REG_CHIP_ID,
 			      IMX415_REG_VALUE_08BIT, &id);
@@ -2182,6 +2211,7 @@ static int imx415_probe(struct i2c_client *client,
 	int ret;
 	u32 i, hdr_mode = 0;
 
+    dev_dbg(dev, "Consti10: %s\n",__FUNCTION__);
 	dev_info(dev, "driver version: %02x.%02x.%02x",
 		DRIVER_VERSION >> 16,
 		(DRIVER_VERSION & 0xff00) >> 8,
@@ -2321,6 +2351,7 @@ static int imx415_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct imx415 *imx415 = to_imx415(sd);
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
 	v4l2_async_unregister_subdev(sd);
 #if defined(CONFIG_MEDIA_CONTROLLER)
