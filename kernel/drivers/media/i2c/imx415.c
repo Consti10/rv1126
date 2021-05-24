@@ -1864,6 +1864,9 @@ static int imx415_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 				v4l2_subdev_get_try_format(sd, fh->pad, 0);
 	const struct imx415_mode *def_mode = &supported_modes[0];
 
+	dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
+
 	mutex_lock(&imx415->mutex);
 	/* Initialize try_fmt */
 	try_fmt->width = def_mode->width;
