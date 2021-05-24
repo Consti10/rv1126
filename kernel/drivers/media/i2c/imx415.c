@@ -1047,7 +1047,7 @@ static int imx415_g_frame_interval(struct v4l2_subdev *sd,
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode = imx415->cur_mode;
     dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
-    dev_dbg(&imx415->client->dev, "Consti10: Here intervall==%d\n",mode->max_fps);
+    dev_dbg(&imx415->client->dev, "Consti10: Here intervall==%d / %d\n",mode->max_fps.numerator,mode->max_fps.denominator);
 
 	mutex_lock(&imx415->mutex);
 	fi->interval = mode->max_fps;
@@ -1658,9 +1658,11 @@ static int __imx415_start_stream(struct imx415 *imx415)
 	int ret;
 	dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 	ret = imx415_write_array(imx415->client, imx415->cur_mode->global_reg_list);
+    dev_dbg(&imx415->client->dev, "Consti10: Wrote cur_mode->global_reg_list:%d\n",ret);
 	if (ret)
 		return ret;
 	ret = imx415_write_array(imx415->client, imx415->cur_mode->reg_list);
+    dev_dbg(&imx415->client->dev, "Consti10: Wrote cur_mode->reg_list:%d\n",ret);
 	if (ret)
 		return ret;
 
