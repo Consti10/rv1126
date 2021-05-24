@@ -965,7 +965,7 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 					 1, vblank_def);
 		__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
 		pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
-        dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",pixel_rate);
+        dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
 		__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
 					 pixel_rate);
 	}
@@ -1543,7 +1543,7 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 				1, h);
 			__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
 			pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
-            dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",pixel_rate);
+            dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
 			__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
 						 pixel_rate);
 		}
