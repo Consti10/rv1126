@@ -640,6 +640,7 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 static const struct imx415_mode supported_modes[] = {
         //0x044c=1100
         //0x08ca=2250
+        //0x08fc=2300
 	/*
 	 * frame rate = 1 / (Vtt * 1H) = 1 / (VMAX * 1H)
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
