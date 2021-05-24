@@ -965,6 +965,7 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 					 1, vblank_def);
 		__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
 		pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
+        dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",pixel_rate);
 		__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
 					 pixel_rate);
 	}
@@ -1484,25 +1485,27 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	u64 pixel_rate = 0;
 
     dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
-    dev_dbg(&imx415->client->dev, "Consti10: Got command:%d\n",cmd);
-
 
 	switch (cmd) {
 	case PREISP_CMD_SET_HDRAE_EXP:
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: PREISP_CMD_SET_HDRAE_EXP\n");
 		if (imx415->cur_mode->hdr_mode == HDR_X2)
 			ret = imx415_set_hdrae(imx415, arg);
 		else if (imx415->cur_mode->hdr_mode == HDR_X3)
 			ret = imx415_set_hdrae_3frame(imx415, arg);
 		break;
 	case RKMODULE_GET_MODULE_INFO:
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: RKMODULE_GET_MODULE_INFO\n");
 		imx415_get_module_inf(imx415, (struct rkmodule_inf *)arg);
 		break;
 	case RKMODULE_GET_HDR_CFG:
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: RKMODULE_GET_HDR_CFG\n");
 		hdr = (struct rkmodule_hdr_cfg *)arg;
 		hdr->esp.mode = HDR_NORMAL_VC;
 		hdr->hdr_mode = imx415->cur_mode->hdr_mode;
 		break;
 	case RKMODULE_SET_HDR_CFG:
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: RKMODULE_SET_HDR_CFG\n");
 		hdr = (struct rkmodule_hdr_cfg *)arg;
 		w = imx415->cur_mode->width;
 		h = imx415->cur_mode->height;
@@ -1540,12 +1543,13 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 				1, h);
 			__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
 			pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
+            dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",pixel_rate);
 			__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
 						 pixel_rate);
 		}
 		break;
 	case RKMODULE_SET_QUICK_STREAM:
-
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: RKMODULE_SET_QUICK_STREAM\n");
 		stream = *((u32 *)arg);
 
 		if (stream)
