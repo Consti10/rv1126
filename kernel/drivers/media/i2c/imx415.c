@@ -638,6 +638,8 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
  * }
  */
 static const struct imx415_mode supported_modes[] = {
+        //0x044c=1100
+        //0x08ca=2250
 	/*
 	 * frame rate = 1 / (Vtt * 1H) = 1 / (VMAX * 1H)
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
@@ -1045,6 +1047,7 @@ static int imx415_g_frame_interval(struct v4l2_subdev *sd,
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode = imx415->cur_mode;
     dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+    dev_dbg(&imx415->client->dev, "Consti10: Here intervall==%d\n",mode->max_fps);
 
 	mutex_lock(&imx415->mutex);
 	fi->interval = mode->max_fps;
@@ -1479,6 +1482,7 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	const struct imx415_mode *mode;
 	u64 pixel_rate = 0;
 
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
     dev_dbg(&imx415->client->dev, "Consti10: Got command:%d\n",cmd);
 
 
