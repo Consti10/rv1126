@@ -1,0 +1,1 @@
+rv1126_rv1109/BoardConfig-38x38-spi-nand.mk

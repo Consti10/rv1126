@@ -1,2 +1,4 @@
-.BoardConfig.mk
-.target_product
+# why the crap did I add that ?
+
+#.BoardConfig.mk
+#.target_product
