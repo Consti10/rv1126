@@ -2172,6 +2172,7 @@ CONFIG_VIDEOBUF2_VMALLOC=y
 # Camera sensor devices
 #
 # CONFIG_VIDEO_IMX219 is not set
+CONFIG_VIDEO_IMX219=y
 # CONFIG_VIDEO_IMX258 is not set
 # CONFIG_VIDEO_IMX274 is not set
 # CONFIG_VIDEO_IMX307 is not set

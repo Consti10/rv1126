@@ -191,7 +191,9 @@
 		dvdd-supply = <&vcc_dvdd>;
 /*
 	//GC2053 电压配置，现在硬件已经固定不是通过PMU来配置的，
+    // Voltage configuration, now the hardware is fixed and not configured through PMU,
         //因此此处不需要配置电源输出，实际需要的电压就是2V8  1.8V  1.2V
+        //Therefore, there is no need to configure the power output here, the actual voltage required is 2V8 1.8V 1.2V
 		avdd-supply = <&vcc2v8_avdd>;
 		dovdd-supply = <&vcc_dovdd>;
 		dvdd-supply = <&vcc1v2_dvdd>;
@@ -274,6 +276,39 @@
 	};
 
 };
+
+//Consti10: I'd love to try out the imx219, however, the connector is not compatible
+/*&i2c1 {
+	status = "okay";
+	clock-frequency = <400000>;
+
+	imx219: imx219@1a {
+		   compatible = "sony,imx219";
+		   reg = <0x10>;
+		   clocks = <&cru CLK_MIPICSI_OUT>;
+		   clock-names = "xvclk";
+		   power-domains = <&power RV1126_PD_VI>;
+		   pinctrl-names = "rockchip,camera_default";
+		   pinctrl-0 = <&mipicsi_clk0>;
+		   avdd-supply = <&vcc3v3_sys>;
+		   dovdd-supply = <&vcc_1v8>;
+		   dvdd-supply = <&vcc_dvdd>;
+		   reset-gpios = <&gpio1 RK_PD5 GPIO_ACTIVE_LOW>;
+		   rockchip,camera-module-index = <1>;
+		   rockchip,camera-module-facing = "front";
+		   rockchip,camera-module-name = "YT10092";
+		   rockchip,camera-module-lens-name = "IR0147-28IRC-8M-F20";
+		   ir-cut = <&cam_ircut0>;
+	//	   flash-leds = <&flash_ir>;
+		   port {
+				   ucam_out0: endpoint {
+						   remote-endpoint = <&mipi_in_ucam0>;
+						   data-lanes = <1 2>;
+				   };
+		   };
+	};
+
+};*/
 
 
 &mdio {
