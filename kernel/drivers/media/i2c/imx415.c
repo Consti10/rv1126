@@ -210,10 +210,10 @@ struct imx415 {
 	struct v4l2_ctrl	*exposure;
 	struct v4l2_ctrl	*anal_a_gain;
 	struct v4l2_ctrl	*digi_gain;
-	struct v4l2_ctrl	*hblank;
-	struct v4l2_ctrl	*vblank;
-	struct v4l2_ctrl	*pixel_rate;
-	struct v4l2_ctrl	*link_freq;
+	struct v4l2_ctrl	*hblank; // maps to V4L2_CID_HBLANK
+	struct v4l2_ctrl	*vblank; // maps to V4L2_CID_VBLANK
+	struct v4l2_ctrl	*pixel_rate; // maps to V4L2_CID_PIXEL_RATE
+	struct v4l2_ctrl	*link_freq; // maps to V4L2_CID_LINK_FREQ but note: it is setup with v4l2_ctrl_new_int_menu, therefore you have to use and "index" here
 	struct mutex		mutex;
 	bool			streaming;
 	bool			power_on;
@@ -230,6 +230,11 @@ struct imx415 {
 
 #define to_imx415(sd) container_of(sd, struct imx415, subdev)
 
+static const s64 link_freq_items[] = {
+        MIPI_FREQ_446M,
+        MIPI_FREQ_743M,
+        MIPI_FREQ_891M,
+};
 
 /*
  * The width and height must be configured to be
@@ -413,12 +418,6 @@ static const struct imx415_mode supported_modes[] = {
 	},
 };
 
-static const s64 link_freq_items[] = {
-	MIPI_FREQ_446M,
-	MIPI_FREQ_743M,
-	MIPI_FREQ_891M,
-};
-
 /* Write registers up to 4 at a time */
 static int imx415_write_reg(struct i2c_client *client, u16 reg,
 			    u32 len, u32 val)
@@ -533,14 +532,46 @@ static void imx415_change_mode(struct imx415 *imx415, const struct imx415_mode *
 		mode->width, mode->height, mode->hdr_mode,mode->bus_fmt,mode->max_fps.numerator,mode->max_fps.denominator);
 }
 
+// setting the v4l2 -ctrl vblank,hblank,pixelrate and link frequency was duplicated across the code (2x).
+// one was marginal different, but doing the "way that makes more sense" at both places works (tested)
+// one can probably name that "update v4l2-controls"
+static void consti10_setup_weird_stuff(struct imx415* imx415){
+    const struct imx415_mode *mode;
+    s64 h_blank, vblank_def, vblank_min;
+    u64 pixel_rate = 0;
+    mode=imx415->cur_mode;
+
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+
+    h_blank = mode->hts_def - mode->width;
+    __v4l2_ctrl_modify_range(imx415->hblank, h_blank,
+                             h_blank, 1, h_blank);
+    vblank_def = mode->vts_def - mode->height;
+    /* VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46 */
+    vblank_min = (mode->height + 46) - mode->height;
+    __v4l2_ctrl_modify_range(imx415->vblank, vblank_min,
+                             IMX415_VTS_MAX - mode->height,
+                             1, vblank_def);
+    __v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
+    // from rockchip docs: http://opensource.rock-chips.com/wiki_Rockchip-isp1
+    // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
+    // The frame rate can be calculated from the pixel clock, image width and height and horizontal and vertical blanking.
+    // The selection of frame rate is performed by selecting the desired horizontal and vertical blanking. The unit of this control is Hz.
+    pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
+    __v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
+                             pixel_rate);
+    dev_dbg(&imx415->client->dev,"Consti10: hBlank:%d, vBlank:(%d:%d),mipiFreqIdx:%d,pixelRate:%d",(int)h_blank,(int)vblank_min,(int)vblank_def,(int)mode->mipi_freq_idx,(int)pixel_rate);
+}
+
+
 static int imx415_set_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_pad_config *cfg,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct imx415 *imx415 = to_imx415(sd);
 	const struct imx415_mode *mode;
-	s64 h_blank, vblank_def, vblank_min;
-	u64 pixel_rate = 0;
+	//s64 h_blank, vblank_def, vblank_min;
+	//u64 pixel_rate = 0;
 
     dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
@@ -560,11 +591,12 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 #endif
 	} else {
 		imx415_change_mode(imx415, mode);
-		h_blank = mode->hts_def - mode->width;
+        consti10_setup_weird_stuff(imx415);
+		/*h_blank = mode->hts_def - mode->width;
 		__v4l2_ctrl_modify_range(imx415->hblank, h_blank,
 					 h_blank, 1, h_blank);
 		vblank_def = mode->vts_def - mode->height;
-		/* VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46 */
+		// VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
 		vblank_min = (mode->height + 46) - mode->height;
 		__v4l2_ctrl_modify_range(imx415->vblank, vblank_min,
 					 IMX415_VTS_MAX - mode->height,
@@ -573,7 +605,7 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 		pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
         dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
 		__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
-					 pixel_rate);
+					 pixel_rate);*/
 	}
 
 	mutex_unlock(&imx415->mutex);
@@ -1088,7 +1120,7 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	u32 i, h, w, stream;
 	long ret = 0;
 	const struct imx415_mode *mode;
-	u64 pixel_rate = 0;
+	//u64 pixel_rate = 0;
 
     dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
 
@@ -1142,7 +1174,8 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 				if (ret)
 					return ret;
 			}
-			w = mode->hts_def - imx415->cur_mode->width;
+            consti10_setup_weird_stuff(imx415);
+			/*w = mode->hts_def - imx415->cur_mode->width;
 			h = mode->vts_def - mode->height;
 			__v4l2_ctrl_modify_range(imx415->hblank, w, w, 1, w);
 			__v4l2_ctrl_modify_range(imx415->vblank, h,
@@ -1152,7 +1185,7 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
             dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
 			__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
-						 pixel_rate);
+						 pixel_rate);*/
 		}
 		break;
 	case RKMODULE_SET_QUICK_STREAM:
