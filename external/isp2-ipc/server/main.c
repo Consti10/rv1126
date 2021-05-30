@@ -450,9 +450,15 @@ if (need_sync_db) {
   fec_mode_set(fec_mode);
   dehaze_mode_set(dehaze_mode);
   /* IMAGE_ADJUSTMENT */
-  char frequency_mode[20] = "PAL(50HZ)";
+  // Consti10: set different freqguency
+  //char frequency_mode[20] = "PAL(50HZ)";
+  char frequency_mode[20] = "PAL(60HZ)";
   dbserver_image_video_adjustment_get(frequency_mode);
   LOG_INFO("frequency_mode is %s\n\n", frequency_mode);
+  // debug what was returned by dbserver, then overwrite again
+  frequency_mode[4]='6';
+  LOG_INFO("frequency_mode is %s\n\n", frequency_mode);
+
   frequency_mode_set(frequency_mode);
   /* NIGHT_TO_DAY*/
   night_to_day_param_cap_set_db();

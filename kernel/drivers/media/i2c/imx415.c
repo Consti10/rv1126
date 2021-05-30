@@ -106,7 +106,7 @@
 
 #define	IMX415_EXPOSURE_MIN		4
 #define	IMX415_EXPOSURE_STEP		1
-#define IMX415_VTS_MAX			0x7fff
+#define IMX415_VTS_MAX			0x7fff //=32767
 
 #define IMX415_GAIN_MIN			0x00
 #define IMX415_GAIN_MAX			0xf0
@@ -252,6 +252,16 @@ static const struct imx415_mode supported_modes[] = {
         //0x044c=1100
         //0x08ca=2250
         //0x08fc=2300
+
+        // from spec sheet: Data rate[Mbps/Lane] = 891 -> for 10bit: frame rate=38.5 3840x2160 1H Period (clock)=861 1V Period=2238
+        // from below:
+        //vblank_def = mode->vts_def - mode->height;
+        //    /* VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46 */
+        //    vblank_min = (mode->height + 46) - mode->height;
+        // set values: hBlank:4936, vBlank:(46:58),mipiFreqIdx:0,pixelRate:356800000
+        // 2250 - 2192 = 58
+        //             = 46
+        // 2238 - 2160 = 78
 	/*
 	 * frame rate = 1 / (Vtt * 1H) = 1 / (VMAX * 1H)
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
@@ -549,6 +559,9 @@ static void consti10_setup_weird_stuff(struct imx415* imx415){
     vblank_def = mode->vts_def - mode->height;
     /* VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46 */
     vblank_min = (mode->height + 46) - mode->height;
+    // lets see what this does, reducing vblank to the minimum
+    // doesn't change a thing !
+    //vblank_def=vblank_min;
     __v4l2_ctrl_modify_range(imx415->vblank, vblank_min,
                              IMX415_VTS_MAX - mode->height,
                              1, vblank_def);
@@ -561,7 +574,19 @@ static void consti10_setup_weird_stuff(struct imx415* imx415){
     __v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
                              pixel_rate);
     dev_dbg(&imx415->client->dev,"Consti10: hBlank:%d, vBlank:(%d:%d),mipiFreqIdx:%d,pixelRate:%d",(int)h_blank,(int)vblank_min,(int)vblank_def,(int)mode->mipi_freq_idx,(int)pixel_rate);
+    // set values: hBlank:4936, vBlank:(46:58),mipiFreqIdx:0,pixelRate:356800000
 }
+
+// crap they don't have get ctrl in kernel code
+/*static void consti10_debug_current_v4l2_values(struct imx415* imx415){
+    s32 curr_h_blank=-1,curr_v_blank=-1,curr_pixel_rate=-1;
+    dev_dbg(&imx415->client->dev, "Consti10: %s\n",__FUNCTION__);
+    curr_h_blank=__v4l2_ctrl_s_ctrl_int64(imx415->vblank);
+    curr_v_blank=__v4l2_ctrl_s_ctrl_int64(imx415->hblank);
+    curr_pixel_rate=__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate);
+
+    dev_dbg(&imx415->client->dev, "Consti10: curr_h_blank:%d,curr_v_blank:%d,curr_pixel_rate:%d,",(int)curr_h_blank,(int)curr_v_blank,(int)curr_pixel_rate);
+}*/
 
 
 static int imx415_set_fmt(struct v4l2_subdev *sd,
@@ -1201,6 +1226,7 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		break;
 
 	default:
+        dev_dbg(&imx415->client->dev, "Consti10: Got command: %d (unknown)\n",(int)cmd);
 		ret = -ENOIOCTLCMD;
 		break;
 	}
