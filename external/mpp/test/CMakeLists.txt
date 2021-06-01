@@ -16,7 +16,7 @@ macro(add_mpp_test module)
         target_link_libraries(${test_name} ${MPP_SHARED} utils)
         set_target_properties(${test_name} PROPERTIES FOLDER "test")
         install(TARGETS ${test_name} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        #add_test(NAME ${test_name} COMMAND ${test_name})
+        add_test(NAME ${test_name} COMMAND ${test_name})
     endif()
 endmacro()
 

@@ -268,8 +268,8 @@ static const struct imx415_mode supported_modes[] = {
 	 */
 	{
 		.bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
-		.width = 3864,
-		.height = 2192,
+        .width = 3864,
+        .height = 2192,
 		.max_fps = {
 			.numerator = 10000,
 			.denominator = 300000,

@@ -1,6 +1,6 @@
 # Rockchip's MPP(Multimedia Processing Platform)
 MPP_SITE = $(TOPDIR)/../external/mpp
-MPP_VERSION = release
+MPP_VERSION = debug
 MPP_SITE_METHOD = local
 
 MPP_CONF_OPTS = "-DRKPLATFORM=ON"
