@@ -25,6 +25,7 @@ static void sigterm_handler(int sig) {
 }
 
 void video_packet_cb(MEDIA_BUFFER mb) {
+    printf("Got video_packet_cb\n");
   static RK_U32 packet_cnt = 0;
   if (g_output_file &&
       ((g_u32FrameCnt == 0) || (packet_cnt++ < g_u32FrameCnt))) {
