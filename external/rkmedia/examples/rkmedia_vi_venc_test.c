@@ -18,6 +18,14 @@
 #include "rkmedia_venc.h"
 
 #include <sys/time.h>
+//socket
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 static bool quit = false;
 static void sigterm_handler(int sig) {
@@ -26,12 +34,45 @@ static void sigterm_handler(int sig) {
 }
 
 static uint64_t lastTimeStamp=0;
+static RK_U32 m_framerate;
+static int sockfd;
+static struct sockaddr_in address={};
+static const int UDP_PACKET_MAX_SIZE=65507;
+static const int M_PORT=5600;
+static const char* M_IP="192.168.0.13";
+
 static uint64_t getTimeMs(){
     struct timeval time;
     gettimeofday(&time, NULL);
     uint64_t millis = (time.tv_sec * ((uint64_t)1000)) + ((uint64_t)time.tv_usec / ((uint64_t)1000));
     return millis;
 }
+
+static void createSocket(){
+    sockfd = socket(AF_INET,SOCK_DGRAM,0);
+    if (sockfd < 0) {
+        printf("Cannot create socket\n");
+    }
+    //Create the address
+    address.sin_family = AF_INET;
+    address.sin_port = htons(M_PORT);
+    inet_pton(AF_INET,M_IP, &address.sin_addr);
+}
+
+static void __attribute__((unused)) mySendTo(void* data,int data_length){
+    if(data_length>UDP_PACKET_MAX_SIZE){
+        printf("Data size exceeds UDP packet size\n");
+        return;
+    }
+    int result= sendto(sockfd, data, data_length, 0, (struct sockaddr *) &(address),
+                       sizeof(struct sockaddr_in));
+    if(result<0){
+        printf("Cannot send data\n");
+    }else{
+        printf("Succesfully sent data\n");
+    }
+}
+
 
 void video_packet_cb(MEDIA_BUFFER mb) {
     const char *nalu_type = "Unknow";
@@ -48,6 +89,9 @@ void video_packet_cb(MEDIA_BUFFER mb) {
     printf("Get Video Encoded packet(%s):ptr:%p, fd:%d, size:%zu, mode:%d\n",
            nalu_type, RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb),
            RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetModeID(mb));
+    // send out data via udp (raw)
+    mySendTo( RK_MPI_MB_GetPtr(mb),RK_MPI_MB_GetSize(mb));
+
     //Consti10: print time to check for fps
     uint64_t ts=getTimeMs();
     uint64_t delta=ts-lastTimeStamp;
@@ -103,7 +147,8 @@ int main(int argc, char *argv[]) {
     RK_U32 u32Width = 1920;
     RK_U32 u32Height = 1080;
     RK_U32 encode_type = 0;
-    RK_U32 m_framerate=30;
+    //RK_U32  __attribute__((unused)) m_framerate = 30;
+    m_framerate=30;
     RK_CHAR *device_name = "rkispp_scale0";
     RK_CHAR *iq_file_dir = NULL;
     int ret = 0;
@@ -134,6 +179,7 @@ int main(int argc, char *argv[]) {
                 device_name = optarg;
                 break;
             case 'f':
+                //printf("framerate %d\n",atoi(optarg));
                 m_framerate=atoi(optarg);
                 break;
             case '?':
@@ -142,6 +188,7 @@ int main(int argc, char *argv[]) {
                 return 0;
         }
     }
+    createSocket();
 
     printf("device_name: %s\n", device_name);
     printf("#height: %d\n", u32Height);
@@ -154,7 +201,7 @@ int main(int argc, char *argv[]) {
         printf("#Aiq xml dirpath: %s\n", iq_file_dir);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     RK_BOOL fec_enable = RK_FALSE;
-    int fps = 30;
+    int fps = m_framerate;
     SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
     SAMPLE_COMM_ISP_Run();
     SAMPLE_COMM_ISP_SetFrameRate(fps);
@@ -197,12 +244,12 @@ int main(int argc, char *argv[]) {
     venc_chn_attr.stVencAttr.u32VirWidth = u32Width;
     venc_chn_attr.stVencAttr.u32VirHeight = u32Height;
     venc_chn_attr.stVencAttr.u32Profile = 77;
-    venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = 30;
+    venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = m_framerate;
     venc_chn_attr.stRcAttr.stH264Cbr.u32BitRate = 1920 * 1080 * 30 / 14;
     venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateDen = 0;
-    venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateNum = 30;
+    venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateNum = m_framerate;
     venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateDen = 0;
-    venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateNum = 30;
+    venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateNum = m_framerate;
     ret = RK_MPI_VENC_CreateChn(0, &venc_chn_attr);
     if (ret) {
         printf("ERROR: create VENC[0] error! ret=%d\n", ret);
