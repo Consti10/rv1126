@@ -46,6 +46,7 @@
 #include <linux/rk-preisp.h>
 
 #include "imx415_regs_rockchip.h"
+#include "imx415_write_regs.h"
 //#include "imx415_regs_consti.h"
 
 #define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x06)
@@ -138,9 +139,6 @@
 
 #define REG_NULL			0xFFFF
 
-#define IMX415_REG_VALUE_08BIT		1
-#define IMX415_REG_VALUE_16BIT		2
-#define IMX415_REG_VALUE_24BIT		3
 
 #define IMX415_GROUP_HOLD_REG		0x3001
 #define IMX415_GROUP_HOLD_START		0x01
@@ -177,20 +175,23 @@ enum imx415_max_pad {
 	PAD_MAX,
 };
 
+// documentation about the members taken from "Rockchip driver quide isp2x CN v1.0.3"
 struct imx415_mode {
-	u32 bus_fmt;
-	u32 width;
-	u32 height;
-	struct v4l2_fract max_fps;
-	u32 hts_def;
-	u32 vts_def;
-	u32 exp_def;
-	u32 mipi_freq_idx;
-	u32 bpp;
-	const struct regval *global_reg_list;
-	const struct regval *reg_list;
-	u32 hdr_mode;
-	u32 vc[PAD_MAX];
+	u32 bus_fmt; //Sensor output format, refer to MEDIA_BUS_FMT table
+	u32 width; //The effective image width, which needs to be consistent with the width
+	// output of the sensor currently configured
+	u32 height; //The effective image height, which needs to be consistent with the height
+	// output of the sensor currently configured
+	struct v4l2_fract max_fps; //Image FPS, denominator/numerator is fps
+	u32 hts_def; // Default HTS, which is effective image width + HBLANK
+	u32 vts_def; //The default VTS is the effective image height + VBLANK
+	u32 exp_def; //Default exposure time
+	u32 mipi_freq_idx;  // not mentioned
+	u32 bpp; // not mentioned, but is bytes per pixel
+	const struct regval *global_reg_list; //not mentioned, but explanatory
+	const struct regval *reg_list;//Register list
+	u32 hdr_mode; //Sensor working mode, support linear mode, two-frame synthesis HDR, three-frame synthesis HDR
+	u32 vc[PAD_MAX]; //Configure MIPI VC channel
 };
 
 struct imx415 {
@@ -236,6 +237,7 @@ static const s64 link_freq_items[] = {
         MIPI_FREQ_891M,
 };
 
+
 /*
  * The width and height must be configured to be
  * the same as the current output resolution of the sensor.
@@ -262,6 +264,12 @@ static const struct imx415_mode supported_modes[] = {
         // 2250 - 2192 = 58
         //             = 46
         // 2238 - 2160 = 78
+
+        // hmm some math:
+        // u32 vts_def; //The default VTS is the effective image height + VBLANK
+        // for mode 0:
+        // vts_def = 0x08ca ==2250. 2250-2192==58 | 2250-2160==90
+        // from imx spec sheet:
 	/*
 	 * frame rate = 1 / (Vtt * 1H) = 1 / (VMAX * 1H)
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
@@ -272,8 +280,10 @@ static const struct imx415_mode supported_modes[] = {
         .height = 2192,
 		.max_fps = {
 			.numerator = 10000,
-			.denominator = 300000,
-		},
+            // per spec sheet, we should actually be able to do 38.5 fps
+			//.denominator = 300000,
+			.denominator = 385000,
+        },
 		.exp_def = 0x08ca - 0x08,
 		.hts_def = 0x044c * IMX415_4LANES * 2,
 		.vts_def = 0x08ca,
@@ -428,82 +438,7 @@ static const struct imx415_mode supported_modes[] = {
 	},
 };
 
-/* Write registers up to 4 at a time */
-static int imx415_write_reg(struct i2c_client *client, u16 reg,
-			    u32 len, u32 val)
-{
-	u32 buf_i, val_i;
-	u8 buf[6];
-	u8 *val_p;
-	__be32 val_be;
 
-	if (len > 4)
-		return -EINVAL;
-
-	buf[0] = reg >> 8;
-	buf[1] = reg & 0xff;
-
-	val_be = cpu_to_be32(val);
-	val_p = (u8 *)&val_be;
-	buf_i = 2;
-	val_i = 4 - len;
-
-	while (val_i < 4)
-		buf[buf_i++] = val_p[val_i++];
-
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
-
-	return 0;
-}
-
-static int imx415_write_array(struct i2c_client *client,
-			      const struct regval *regs)
-{
-	u32 i;
-	int ret = 0;
-
-	for (i = 0; ret == 0 && regs[i].addr != REG_NULL; i++) {
-		ret = imx415_write_reg(client, regs[i].addr,
-				       IMX415_REG_VALUE_08BIT, regs[i].val);
-	}
-	return ret;
-}
-
-/* Read registers up to 4 at a time */
-static int imx415_read_reg(struct i2c_client *client, u16 reg, unsigned int len,
-			   u32 *val)
-{
-	struct i2c_msg msgs[2];
-	u8 *data_be_p;
-	__be32 data_be = 0;
-	__be16 reg_addr_be = cpu_to_be16(reg);
-	int ret;
-
-	if (len > 4 || !len)
-		return -EINVAL;
-
-	data_be_p = (u8 *)&data_be;
-	/* Write register address */
-	msgs[0].addr = client->addr;
-	msgs[0].flags = 0;
-	msgs[0].len = 2;
-	msgs[0].buf = (u8 *)&reg_addr_be;
-
-	/* Read data from register */
-	msgs[1].addr = client->addr;
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].len = len;
-	msgs[1].buf = &data_be_p[4 - len];
-
-	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
-	if (ret != ARRAY_SIZE(msgs))
-		return -EIO;
-
-	*val = be32_to_cpu(data_be);
-
-	return 0;
-}
 
 static int imx415_get_reso_dist(const struct imx415_mode *mode,
 				struct v4l2_mbus_framefmt *framefmt)
@@ -617,20 +552,6 @@ static int imx415_set_fmt(struct v4l2_subdev *sd,
 	} else {
 		imx415_change_mode(imx415, mode);
         consti10_setup_weird_stuff(imx415);
-		/*h_blank = mode->hts_def - mode->width;
-		__v4l2_ctrl_modify_range(imx415->hblank, h_blank,
-					 h_blank, 1, h_blank);
-		vblank_def = mode->vts_def - mode->height;
-		// VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
-		vblank_min = (mode->height + 46) - mode->height;
-		__v4l2_ctrl_modify_range(imx415->vblank, vblank_min,
-					 IMX415_VTS_MAX - mode->height,
-					 1, vblank_def);
-		__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
-		pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
-        dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
-		__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
-					 pixel_rate);*/
 	}
 
 	mutex_unlock(&imx415->mutex);
@@ -1200,17 +1121,6 @@ static long imx415_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 					return ret;
 			}
             consti10_setup_weird_stuff(imx415);
-			/*w = mode->hts_def - imx415->cur_mode->width;
-			h = mode->vts_def - mode->height;
-			__v4l2_ctrl_modify_range(imx415->hblank, w, w, 1, w);
-			__v4l2_ctrl_modify_range(imx415->vblank, h,
-				IMX415_VTS_MAX - mode->height,
-				1, h);
-			__v4l2_ctrl_s_ctrl(imx415->link_freq, mode->mipi_freq_idx);
-			pixel_rate = (u32)link_freq_items[mode->mipi_freq_idx] / mode->bpp * 2 * IMX415_4LANES;
-            dev_dbg(&imx415->client->dev, "Consti10: calculatedPixelRate:%d\n",(int)pixel_rate);
-			__v4l2_ctrl_s_ctrl_int64(imx415->pixel_rate,
-						 pixel_rate);*/
 		}
 		break;
 	case RKMODULE_SET_QUICK_STREAM:
@@ -1848,6 +1758,20 @@ err_free_handler:
 	return ret;
 }
 
+static void debugRegisterRead(struct imx415 *imx415,u16 reg){
+    struct device *dev = &imx415->client->dev;
+    u32 value=0;
+    int ret;
+    dev_dbg(dev, "Consti10: Start reading register\n");
+    ret = imx415_read_reg(imx415->client, reg,
+                          IMX415_REG_VALUE_08BIT, &value);
+    if(ret){
+        dev_dbg(dev, "Consti10: Couldn't read register %d\n",(int)reg);
+        return;
+    }
+    dev_dbg(dev,"Consti10: Value of %d is %d",(int)reg,(int)value);
+}
+
 static int imx415_check_sensor_id(struct imx415 *imx415,
 				  struct i2c_client *client)
 {
@@ -1862,6 +1786,9 @@ static int imx415_check_sensor_id(struct imx415 *imx415,
 		dev_err(dev, "Unexpected sensor id(%06x), ret(%d)\n", id, ret);
 		return -ENODEV;
 	}
+
+	// added by consti10:
+    debugRegisterRead(imx415,IMX415_REG_CHIP_ID);
 
 	dev_info(dev, "Detected imx415 id %06x\n", CHIP_ID);
 
