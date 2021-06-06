@@ -406,6 +406,20 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
         {0x4026, 0x5F},
         {0x4028, 0x2F},
         {0x4074, 0x01},
+        // added for testing Consti10:
+        {0x301C,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
+        {0x3020,0x00}, //HADD //0h: All-pixel mode 1h: Horizontal 2 binning
+        {0x3021,0x00}, //VADD //0h: All-pixel mode 1h: Vertical 2 binning
+        {0x3022,0x00}, //ADDMODE //0h: All-pixel mode 1h: Horizontal/Vertical 2/2-line binning
+        //
+        // to resolve:
+        {0x3031,0x00}, //ADBIT //set by global to 0
+        {0x3032,0x00}, //MDBIT //set by global to 0
+        //
+        {0x30D9,0x06}, //DIG_CLP_VSTART ? 0x02=binning 0x06=All-pixel scan mode , default 0x06
+        {0x30DA,0x02}, //DIG_CLP_VNUM ? 0x01=binning 0x02=all-pixel scan mode, default 0x02
+        // added for testing Consti10 end
+
         {REG_NULL, 0x00},
 };
 

@@ -281,12 +281,12 @@ static const struct imx415_mode supported_modes[] = {
 		.max_fps = {
 			.numerator = 10000,
             // per spec sheet, we should actually be able to do 38.5 fps
-			//.denominator = 300000,
-			.denominator = 385000,
+			.denominator = 300000,
+			//.denominator = 385000, looks as if i do so, setting fps to 38 from application results in 30fps now ?!
         },
-		.exp_def = 0x08ca - 0x08,
-		.hts_def = 0x044c * IMX415_4LANES * 2,
-		.vts_def = 0x08ca,
+		.exp_def = 0x08ca - 0x08, //2250-8=2248
+		.hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
+		.vts_def = 0x08ca,                     // 2250
 		.global_reg_list = imx415_global_10bit_3864x2192_regs,
 		.reg_list = imx415_linear_10bit_3864x2192_891M_regs,
 		.hdr_mode = NO_HDR,
@@ -1762,7 +1762,7 @@ static void debugRegisterRead(struct imx415 *imx415,u16 reg){
     struct device *dev = &imx415->client->dev;
     u32 value=0;
     int ret;
-    dev_dbg(dev, "Consti10: Start reading register\n");
+    dev_dbg(dev, "Consti10: Start reading registerX\n");
     ret = imx415_read_reg(imx415->client, reg,
                           IMX415_REG_VALUE_08BIT, &value);
     if(ret){
