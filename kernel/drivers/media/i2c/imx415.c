@@ -274,7 +274,25 @@ static const struct imx415_mode supported_modes[] = {
 	 * frame rate = 1 / (Vtt * 1H) = 1 / (VMAX * 1H)
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
 	 */
-	{
+	// maybe this just works - yeah
+    {
+            .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
+            .width = 1920,
+            .height = 1080,
+            .max_fps = {
+                    .numerator = 10000,
+                    .denominator = 600000,
+            },
+            .exp_def = 0x08ca - 0x08, //2250-8=2248
+            .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
+            .vts_def = 0x08ca,                     // 2250
+            .global_reg_list = imx415_global_10bit_3864x2192_regs,
+            .reg_list = imx415_linear_10bit_3864x2192_891M_regs_binning,
+            .hdr_mode = NO_HDR,
+            .mipi_freq_idx = 0,
+            .bpp = 10,
+    },
+	/*{
 		.bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
         .width = 3864,
         .height = 2192,
@@ -303,10 +321,10 @@ static const struct imx415_mode supported_modes[] = {
 		},
 		.exp_def = 0x08fc * 2 - 0x0da8,
 		.hts_def = 0x0226 * IMX415_4LANES * 2,
-		/*
-		 * IMX415 HDR mode T-line is half of Linear mode,
-		 * make vts double to workaround.
-		 */
+		 //
+		 // IMX415 HDR mode T-line is half of Linear mode,
+		 // make vts double to workaround.
+		 //
 		.vts_def = 0x08fc * 2,
 		.global_reg_list = imx415_global_10bit_3864x2192_regs,
 		.reg_list = imx415_hdr2_10bit_3864x2192_1485M_regs,
@@ -328,10 +346,10 @@ static const struct imx415_mode supported_modes[] = {
 		},
 		.exp_def = 0x13e,
 		.hts_def = 0x021A * IMX415_4LANES * 2,
-		/*
-		 * IMX415 HDR mode T-line is half of Linear mode,
-		 * make vts double to workaround.
-		 */
+        //
+        //IMX415 HDR mode T-line is half of Linear mode,
+        // make vts double to workaround.
+        //
 		.vts_def = 0x06BD * 4,
 		.global_reg_list = imx415_global_10bit_3864x2192_regs,
 		.reg_list = imx415_hdr3_10bit_3864x2192_1485M_regs,
@@ -353,10 +371,10 @@ static const struct imx415_mode supported_modes[] = {
 		},
 		.exp_def = 0x13e,
 		.hts_def = 0x01ca * IMX415_4LANES * 2,
-		/*
-		 * IMX415 HDR mode T-line is half of Linear mode,
-		 * make vts double to workaround.
-		 */
+        //
+        // IMX415 HDR mode T-line is half of Linear mode,
+        // make vts double to workaround.
+        //
 		.vts_def = 0x07ea * 4,
 		.global_reg_list = imx415_global_10bit_3864x2192_regs,
 		.reg_list = imx415_hdr3_10bit_3864x2192_1782M_regs,
@@ -369,7 +387,7 @@ static const struct imx415_mode supported_modes[] = {
 		.vc[PAD3] = V4L2_MBUS_CSI2_CHANNEL_2,//S->csi wr2
 	},
 	{
-		/* 1H period = (1100 clock) = (1100 * 1 / 74.25MHz) */
+        // 1H period = (1100 clock) = (1100 * 1 / 74.25MHz)
 		.bus_fmt = MEDIA_BUS_FMT_SGBRG12_1X12,
 		.width = 3864,
 		.height = 2192,
@@ -396,10 +414,10 @@ static const struct imx415_mode supported_modes[] = {
 		},
 		.exp_def = 0x08CA * 2 - 0x0d90,
 		.hts_def = 0x0226 * IMX415_4LANES * 2,
-		/*
-		 * IMX415 HDR mode T-line is half of Linear mode,
-		 * make vts double(that is FSC) to workaround.
-		 */
+        //
+        // IMX415 HDR mode T-line is half of Linear mode,
+        // make vts double(that is FSC) to workaround.
+        //
 		.vts_def = 0x08CA * 2,
 		.global_reg_list = imx415_global_12bit_3864x2192_regs,
 		.reg_list = imx415_hdr2_12bit_3864x2192_1782M_regs,
@@ -421,10 +439,10 @@ static const struct imx415_mode supported_modes[] = {
 		},
 		.exp_def = 0x114,
 		.hts_def = 0x0226 * IMX415_4LANES * 2,
-		/*
-		 * IMX415 HDR mode T-line is half of Linear mode,
-		 * make vts double(that is FSC) to workaround.
-		 */
+        //
+        //IMX415 HDR mode T-line is half of Linear mode,
+        // make vts double(that is FSC) to workaround.
+        //
 		.vts_def = 0x0696 * 4,
 		.global_reg_list = imx415_global_12bit_3864x2192_regs,
 		.reg_list = imx415_hdr3_12bit_3864x2192_1782M_regs,
@@ -435,7 +453,7 @@ static const struct imx415_mode supported_modes[] = {
 		.vc[PAD1] = V4L2_MBUS_CSI2_CHANNEL_1,//M->csi wr0
 		.vc[PAD2] = V4L2_MBUS_CSI2_CHANNEL_0,//L->csi wr0
 		.vc[PAD3] = V4L2_MBUS_CSI2_CHANNEL_2,//S->csi wr2
-	},
+	},*/
 };
 
 
@@ -464,6 +482,7 @@ imx415_find_best_fit(struct imx415 *imx415, struct v4l2_subdev_format *fmt)
 			cur_best_fit = i;
 		}
 	}
+    dev_dbg(&imx415->client->dev, "Consti10: %s selected mode (idx) %d\n",__FUNCTION__,(int)cur_best_fit);
 
 	return &supported_modes[cur_best_fit];
 }
@@ -1487,8 +1506,10 @@ static int imx415_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 #define CROP_START(SRC, DST) (((SRC) - (DST)) / 2 / 4 * 4)
-#define DST_WIDTH 3840
-#define DST_HEIGHT 2160
+//#define DST_WIDTH 3840
+//#define DST_HEIGHT 2160
+#define DST_WIDTH 1920
+#define DST_HEIGHT 1080
 
 /*
  * The resolution of the driver configuration needs to be exactly
@@ -1762,7 +1783,7 @@ static void debugRegisterRead(struct imx415 *imx415,u16 reg){
     struct device *dev = &imx415->client->dev;
     u32 value=0;
     int ret;
-    dev_dbg(dev, "Consti10: Start reading registerX\n");
+    dev_dbg(dev, "Consti10: Start reading registerY\n");
     ret = imx415_read_reg(imx415->client, reg,
                           IMX415_REG_VALUE_08BIT, &value);
     if(ret){

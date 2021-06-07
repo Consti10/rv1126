@@ -348,10 +348,12 @@ V4l2Device::set_format (struct v4l2_format &format)
 
     if (tmp_format.fmt.pix.width != format.fmt.pix.width || tmp_format.fmt.pix.height != format.fmt.pix.height) {
         XCAM_LOG_ERROR (
-            "device(%s) set v4l2 format failed, supported format: width:%d, height:%d",
+            "device(%s) set v4l2 format failed, supported format: width:%d, height:%d wanted w%d h%d",
             XCAM_STR (_name),
             format.fmt.pix.width,
-            format.fmt.pix.height);
+            format.fmt.pix.height,
+            tmp_format.fmt.pix.width,
+            tmp_format.fmt.pix.height);
 
         return XCAM_RETURN_ERROR_PARAM;
     }
