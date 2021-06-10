@@ -111,10 +111,10 @@
                       		 </cell>
 	              		<cell index="6" type="struct" size="[1 1]">
                   			<resolution index="1" type="char" size="[1 9]">
-                    			 1920x1080
+                    			 2560x1440
                   			</resolution>
 		         		<measureWindowSize index="1" type="double" size="[1 4]">
-		            		 [0  0  1920 1080]
+		            		 [0  0  2560 1440]
 		        			 </measureWindowSize>
                       		 </cell>
 	        		 </resAll>
@@ -1820,7 +1820,7 @@
                [1]
             </isFpsFix>
             <FpsValue index="1" type="double" size="[1 1]">
-               [60]
+               [25]
             </FpsValue>
          </AecFrameRateMode>
          <AecAntiFlicker index="1" type="struct" size="[1 1]">

@@ -83,9 +83,9 @@
 #define IMX415_SF2_GAIN_REG_H		0x3095
 #define IMX415_SF2_GAIN_REG_L		0x3094
 
-#define IMX415_LF_EXPO_REG_H		0x3052
-#define IMX415_LF_EXPO_REG_M		0x3051
-#define IMX415_LF_EXPO_REG_L		0x3050
+#define IMX415_LF_EXPO_REG_H		0x3052 //SHR0 written to from "V4L2_CID_EXPOSURE" command
+#define IMX415_LF_EXPO_REG_M		0x3051 //SHR0
+#define IMX415_LF_EXPO_REG_L		0x3050 //SHR0
 
 #define IMX415_SF1_EXPO_REG_H		0x3056
 #define IMX415_SF1_EXPO_REG_M		0x3055
@@ -129,9 +129,9 @@
 #define IMX415_FETCH_VTS_M(VAL)		(((VAL) >> 8) & 0xFF)
 #define IMX415_FETCH_VTS_L(VAL)		((VAL) & 0xFF)
 
-#define IMX415_VTS_REG_L		0x3024
-#define IMX415_VTS_REG_M		0x3025
-#define IMX415_VTS_REG_H		0x3026
+#define IMX415_VTS_REG_L		0x3024 //VMAX in spec sheet. written to on V4L2_CID_VBLANK command.
+#define IMX415_VTS_REG_M		0x3025 //VMAX in spec sheet.
+#define IMX415_VTS_REG_H		0x3026 //VMAX in spec sheet.
 
 #define IMX415_MIRROR_BIT_MASK		BIT(0)
 #define IMX415_FLIP_BIT_MASK		BIT(1)
@@ -286,6 +286,7 @@ static const struct imx415_mode supported_modes[] = {
             .exp_def = 0x08ca - 0x08, //2250-8=2248
             .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
             .vts_def = 0x08ca,                     // 2250
+            //.vts_def = 58 + 1080,
             .global_reg_list = imx415_global_10bit_3864x2192_regs,
             .reg_list = imx415_linear_10bit_3864x2192_891M_regs_binning,
             .hdr_mode = NO_HDR,
@@ -1623,6 +1624,8 @@ static int imx415_set_ctrl(struct v4l2_ctrl *ctrl)
 				       IMX415_FETCH_EXP_H(shr0));
 		dev_dbg(&client->dev, "set exposure(shr0) %d = cur_vts(%d) - val(%d)\n",
 			shr0, imx415->cur_vts, ctrl->val);
+        //dev_dbg(&client->dev, "not set exposure(shr0) %d = cur_vts(%d) - val(%d)\n",
+        //            shr0, imx415->cur_vts, ctrl->val);
 		break;
 	case V4L2_CID_ANALOGUE_GAIN:
 		if (imx415->cur_mode->hdr_mode != NO_HDR)
