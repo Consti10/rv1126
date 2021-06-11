@@ -275,7 +275,7 @@ static const struct imx415_mode supported_modes[] = {
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
 	 */
 	// maybe this just works - yeah
-    {
+    /*{
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
             .width = 1920,
             .height = 1080,
@@ -289,6 +289,25 @@ static const struct imx415_mode supported_modes[] = {
             //.vts_def = 58 + 1080,
             .global_reg_list = imx415_global_10bit_3864x2192_regs,
             .reg_list = imx415_linear_10bit_3864x2192_891M_regs_binning,
+            .hdr_mode = NO_HDR,
+            .mipi_freq_idx = 0,
+            .bpp = 10,
+    },*/
+    {
+            .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
+            .width = 3864,
+            .height = 2192,
+            .max_fps = {
+                    .numerator = 10000,
+                    // per spec sheet, we should actually be able to do 38.5 fps
+                    .denominator = 300000,
+                    //.denominator = 385000, looks as if i do so, setting fps to 38 from application results in 30fps now ?!
+            },
+            .exp_def = 0x08ca - 0x08, //2250-8=2248
+            .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
+            .vts_def = 0x08ca,                     // 2250
+            .global_reg_list = imx415_global_10bit_3864x2192_regs,
+            .reg_list = imx415_linear_10bit_3864x2192_891M_regs,
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
@@ -1507,10 +1526,10 @@ static int imx415_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 #define CROP_START(SRC, DST) (((SRC) - (DST)) / 2 / 4 * 4)
-//#define DST_WIDTH 3840
-//#define DST_HEIGHT 2160
-#define DST_WIDTH 1920
-#define DST_HEIGHT 1080
+#define DST_WIDTH 3840
+#define DST_HEIGHT 2160
+//#define DST_WIDTH 1920
+//#define DST_HEIGHT 1080
 
 /*
  * The resolution of the driver configuration needs to be exactly

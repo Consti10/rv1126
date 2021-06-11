@@ -7,27 +7,6 @@ CMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
   CMake that the project does not need compatibility with older versions.
 
 
--- The CXX compiler identification is GNU 9.3.0
--- The C compiler identification is GNU 9.3.0
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Check for working CXX compiler: /usr/bin/c++ - skipped
--- Detecting CXX compile features
--- Detecting CXX compile features - done
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working C compiler: /usr/bin/cc - skipped
--- Detecting C compile features
--- Detecting C compile features - done
--- Looking for pthread.h
--- Looking for pthread.h - found
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
--- Looking for pthread_create in pthreads
--- Looking for pthread_create in pthreads - not found
--- Looking for pthread_create in pthread
--- Looking for pthread_create in pthread - found
--- Found Threads: TRUE  
 CMake Error at /home/consti10/Downloads/clion-2020.3/bin/cmake/linux/share/cmake-3.19/Modules/FindPackageHandleStandardArgs.cmake:218 (message):
   Could NOT find EasyMedia (missing: EASYMEDIA_LIBRARY EASYMEDIA_INCLUDE_DIR)
 Call Stack (most recent call first):

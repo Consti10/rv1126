@@ -15,6 +15,40 @@ struct regval {
     u8 val;
 };
 
+#define IMX415_VMAX_L 0x3024
+#define IMX415_VMAX_M 0x3025
+#define IMX415_VMAX_H 0x3026
+#define IMX415_HMAX_L 0x3028
+#define IMX415_HMAX_H 0x3029
+
+#define IMX415_XMSTA 0x3002
+
+#define IMX415_SYS_MODE 0x3033
+
+
+// each of them is 2 byte though
+#define IMX415_TCLKPOST 0x4018
+#define IMX415_TCLKPREPARE 0x401A
+#define IMX415_TCLKTRAIL 0x401C
+#define IMX415_TCLKZERO 0x401E
+#define IMX415_THSPREPARE 0x4020
+#define IMX415_THSZERO 0x4022
+#define IMX415_THSTRAIL 0x4024
+#define IMX415_THSEXIT 0x4026
+#define IMX415_TLPX 0x4028
+
+// regarding cropping:
+#define IMX415_WINMODE 0x301C
+// 2 byte
+#define IMX415_PIX_HST 0x3040
+#define IMX415_PIX_HWIDTH 0x3042
+#define IMX415_PIX_VST 0x3044
+#define IMX415_PIX_VWIDTH 0x3046
+
+// one byte only
+#define IMX415_INCKSEL6 0x400C
+#define IMX415_INCKSEL7 0x4074
+
 static __maybe_unused const struct regval imx415_global_10bit_3864x2192_regs[] = {
         {0x3002, 0x00},
         {0x3008, 0x7F},
@@ -426,8 +460,8 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_binning[] = {
         {0x3024, 0xCA},
         {0x3025, 0x08},
-        {0x3028, 0x4C},
-        {0x3029, 0x04},
+        {IMX415_HMAX_L, 0x4C},
+        {IMX415_HMAX_H, 0x04},
         {0x302C, 0x00},
         {0x302D, 0x00},
         {0x3033, 0x05},
@@ -474,15 +508,17 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 #define IMX415_FETCH_16BIT_H(VAL)	(((VAL) >> 8) & 0x07)
 #define IMX415_FETCH_16BIT_L(VAL)	((VAL) & 0xFF)
 
+#define IMX415_FULL_SENSOR_RES_WIDTH 3864
+#define IMX415_FULL_SENSOR_RES_HEIGHT 2192
 
-static __maybe_unused const struct regval imx415_linear_10bit_1920x1080_891M_regs_cropping[] = {
+static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_cropping[] = {
         {0x3024, 0xCA},
         {0x3025, 0x08},
-        {0x3028, 0x4C},
-        {0x3029, 0x04},
+        {IMX415_HMAX_L, IMX415_FETCH_16BIT_L(0x44C)},
+        {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x44C)},
         {0x302C, 0x00},
         {0x302D, 0x00},
-        {0x3033, 0x05},
+        {IMX415_SYS_MODE, 0x05},
         {0x3050, 0x08},
         {0x3051, 0x00},
         {0x3054, 0x19},
@@ -493,29 +529,50 @@ static __maybe_unused const struct regval imx415_linear_10bit_1920x1080_891M_reg
         {0x3118, 0xC0},
         {0x3260, 0x01},
         {0x400C, 0x00},
-        {0x4018, 0x7F},
-        {0x401A, 0x37},
-        {0x401C, 0x37},
-        {0x401E, 0xF7},
-        {0x401F, 0x00},
-        {0x4020, 0x3F},
-        {0x4022, 0x6F},
-        {0x4024, 0x3F},
-        {0x4026, 0x5F},
-        {0x4028, 0x2F},
-        {0x4074, 0x01},
+
+        {IMX415_TCLKPOST, 0x7F},
+        {IMX415_TCLKPREPARE, 0x37},
+        {IMX415_TCLKTRAIL, 0x37},
+        {IMX415_TCLKZERO, 0xF7},
+        {(IMX415_TCLKZERO+0x01), 0x00}, //why the heck is this the only one of all where the higher bits need to be set to 0 argh
+        {IMX415_THSPREPARE, 0x3F},
+        {IMX415_THSZERO, 0x6F},
+        {IMX415_THSTRAIL, 0x3F},
+        {IMX415_THSEXIT, 0x5F},
+        {IMX415_TLPX, 0x2F},
+        {IMX415_INCKSEL7, 0x01},
         // added for testing Consti10:
-        {0x301C,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
-        {0x3040,0x00}, //PIX_HST Effective pixel Start position (Horizontal direction) | Default in spec: 0x000
-        {0x3041,0x00}, //""
-        {0x3042,IMX415_FETCH_16BIT_L(0x0F18)}, //PIX_HWIDTH Effective pixel Cropping width (Horizontal direction) | Default in spec: 0x0F18==3864
-        {0x3043,IMX415_FETCH_16BIT_H(0x0F18)}  //""
-        {0x3044,0x00}, //PIX_VST Effective pixel Star position (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x000
-        {0x3045,0x00}, //""
-        {0x3046,IMX415_FETCH_16BIT_L(0x1120)}, //PIX_VWIDTH Effective pixel Cropping width (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x1120==4384
-        {0x3047,IMX415_FETCH_16BIT_H(0x1120)}, //""
+        {IMX415_WINMODE,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
+        {IMX415_PIX_HST,0x00}, //PIX_HST Effective pixel Start position (Horizontal direction) | Default in spec: 0x000
+        {IMX415_PIX_HST+0x01,0x00}, //""
+        {IMX415_PIX_HWIDTH,IMX415_FETCH_16BIT_L(0x0F18)}, //PIX_HWIDTH Effective pixel Cropping width (Horizontal direction) | Default in spec: 0x0F18==3864
+        {IMX415_PIX_HWIDTH+0x01,IMX415_FETCH_16BIT_H(0x0F18)},  //""
+        {IMX415_PIX_VST,0x00}, //PIX_VST Effective pixel Star position (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x000
+        {IMX415_PIX_VST+0x01,0x00}, //""
+        {IMX415_PIX_VWIDTH,IMX415_FETCH_16BIT_L(0x1120)}, //PIX_VWIDTH Effective pixel Cropping width (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x1120==4384
+        {IMX415_PIX_VWIDTH+0x01,IMX415_FETCH_16BIT_H(0x1120)}, //""
         // added for testing Consti10 end
 
         {REG_NULL, 0x00},
 };
+
+// PIX_VWIDTH
+//V TTL (1farame line length or VMAX) ≥ (PIX_VWIDTH / 2) + 46
+// (4384 /2) +46 = 2238
+
+//Also: In all pixel mode,, 4 lane, 891 mbpp
+// VMAX: 0x8CA = 2250
+// and rockchip used .vts_def = 0x08ca
+// HMAX: 44Ch = 1100
+// and rockchip uses .hts_def = 0x044c * IMX415_4LANES * 2
+
+// Whereas in Horizontal/Vertical 2/2-line binning mode, 4 lane:
+// VMAX: 0x8CA (SAME!)
+// HMAX:44Ch (SAME!)
+
+// Frame rate on Window cropping mode
+// Frame rate [frame/s] = 1 / (V TTL × (1H period))
+/// 1H period (unit: [s]) : Set "1H period" or more in the table of "Operating mode" before cropping mode.
+// 1/2250*14.9*1e-6= 6.62222222222
+// 1/4384*(14.9*10^6)=3398.72262774
 #endif //MEDIASEVER_IMX415_REGS_ROCKCHIP_H
