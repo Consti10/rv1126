@@ -556,6 +556,7 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
         {REG_NULL, 0x00},
 };
 
+
 // PIX_VWIDTH
 //V TTL (1farame line length or VMAX) ≥ (PIX_VWIDTH / 2) + 46
 // (4384 /2) +46 = 2238
