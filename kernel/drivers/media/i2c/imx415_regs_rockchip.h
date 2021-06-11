@@ -20,6 +20,10 @@ struct regval {
 #define IMX415_VMAX_H 0x3026
 #define IMX415_HMAX_L 0x3028
 #define IMX415_HMAX_H 0x3029
+//
+#define IMX415_SHR0_L 0x3050
+#define IMX415_SHR0_M 0x3051
+#define IMX415_SHR0_H 0x3052
 
 #define IMX415_XMSTA 0x3002
 
@@ -40,12 +44,27 @@ struct regval {
 // regarding cropping:
 #define IMX415_WINMODE 0x301C
 // 2 byte
-#define IMX415_PIX_HST 0x3040
-#define IMX415_PIX_HWIDTH 0x3042
-#define IMX415_PIX_VST 0x3044
-#define IMX415_PIX_VWIDTH 0x3046
+#define IMX415_PIX_HST_L 0x3040
+#define IMX415_PIX_HST_H 0x3041
+#define IMX415_PIX_HWIDTH_L 0x3042
+#define IMX415_PIX_HWIDTH_H 0x3043
+#define IMX415_PIX_VST_L 0x3044
+#define IMX415_PIX_VST_H 0x3045
+#define IMX415_PIX_VWIDTH_L 0x3046
+#define IMX415_PIX_VWIDTH_H 0x3047
 
-// one byte only
+// regarding "INCK"
+#define IMX415_BCWAIT_TIME 0x3009
+#define IMX415_CPWAIT_TIME 0x300B
+#define IMX415_INCKSEL1 0x3115
+#define IMX415_INCKSEL2 0x3116
+#define IMX415_INCKSEL3_L 0x3118
+#define IMX415_INCKSEL3_H 0x3119
+#define IMX415_INCKSEL4_L 0x311A
+#define IMX415_INCKSEL4_H 0x311B
+#define IMX415_INCKSEL5 0x311E
+#define IMX415_TXCLKESC_FREQ_L 0x4004
+#define IMX415_TXCLKESC_FREQ_H 0x4005
 #define IMX415_INCKSEL6 0x400C
 #define IMX415_INCKSEL7 0x4074
 
@@ -512,23 +531,23 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 #define IMX415_FULL_SENSOR_RES_HEIGHT 2192
 
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_cropping[] = {
-        {0x3024, 0xCA},
-        {0x3025, 0x08},
+        {IMX415_VMAX_L, 0xCA}, //maybe same
+        {IMX415_VMAX_M, 0x08}, //maybe same
         {IMX415_HMAX_L, IMX415_FETCH_16BIT_L(0x44C)},
         {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x44C)},
-        {0x302C, 0x00},
-        {0x302D, 0x00},
+        {0x302C, 0x00}, //cannot find
+        {0x302D, 0x00}, //cannot find
         {IMX415_SYS_MODE, 0x05},
-        {0x3050, 0x08},
-        {0x3051, 0x00},
-        {0x3054, 0x19},
-        {0x3058, 0x3E},
-        {0x3060, 0x25},
-        {0x3064, 0x4a},
-        {0x30CF, 0x00},
-        {0x3118, 0xC0},
-        {0x3260, 0x01},
-        {0x400C, 0x00},
+        {IMX415_SHR0_L, 0x08},
+        {IMX415_SHR0_M, 0x00},
+        {0x3054, 0x19}, //cannot find
+        {0x3058, 0x3E}, //maybe same
+        {0x3060, 0x25}, //cannot find
+        {0x3064, 0x4a}, //maybe same
+        {0x30CF, 0x00}, //cannot find
+        {IMX415_INCKSEL3_L, 0xC0},
+        {0x3260, 0x01}, //cannot find
+        {IMX415_INCKSEL6, 0x00},
 
         {IMX415_TCLKPOST, 0x7F},
         {IMX415_TCLKPREPARE, 0x37},
@@ -543,14 +562,14 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
         {IMX415_INCKSEL7, 0x01},
         // added for testing Consti10:
         {IMX415_WINMODE,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
-        {IMX415_PIX_HST,0x00}, //PIX_HST Effective pixel Start position (Horizontal direction) | Default in spec: 0x000
-        {IMX415_PIX_HST+0x01,0x00}, //""
-        {IMX415_PIX_HWIDTH,IMX415_FETCH_16BIT_L(0x0F18)}, //PIX_HWIDTH Effective pixel Cropping width (Horizontal direction) | Default in spec: 0x0F18==3864
-        {IMX415_PIX_HWIDTH+0x01,IMX415_FETCH_16BIT_H(0x0F18)},  //""
-        {IMX415_PIX_VST,0x00}, //PIX_VST Effective pixel Star position (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x000
-        {IMX415_PIX_VST+0x01,0x00}, //""
-        {IMX415_PIX_VWIDTH,IMX415_FETCH_16BIT_L(0x1120)}, //PIX_VWIDTH Effective pixel Cropping width (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x1120==4384
-        {IMX415_PIX_VWIDTH+0x01,IMX415_FETCH_16BIT_H(0x1120)}, //""
+        {IMX415_PIX_HST_L,0x00}, //PIX_HST Effective pixel Start position (Horizontal direction) | Default in spec: 0x000
+        {IMX415_PIX_HST_H,0x00}, //""
+        {IMX415_PIX_HWIDTH_L,IMX415_FETCH_16BIT_L(0x0F18)}, //PIX_HWIDTH Effective pixel Cropping width (Horizontal direction) | Default in spec: 0x0F18==3864
+        {IMX415_PIX_HWIDTH_H,IMX415_FETCH_16BIT_H(0x0F18)},  //""
+        {IMX415_PIX_VST_L,0x00}, //PIX_VST Effective pixel Star position (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x000
+        {IMX415_PIX_VST_H,0x00}, //""
+        {IMX415_PIX_VWIDTH_L,IMX415_FETCH_16BIT_L(0x1120)}, //PIX_VWIDTH Effective pixel Cropping width (Vertical direction) Designated in V units ( Line×2 ) | Default in spec: 0x1120==4384
+        {IMX415_PIX_VWIDTH_H,IMX415_FETCH_16BIT_H(0x1120)}, //""
         // added for testing Consti10 end
 
         {REG_NULL, 0x00},
