@@ -27,14 +27,13 @@ struct regval {
 
 #define IMX415_XMSTA 0x3002
 
-#define IMX415_SYS_MODE 0x3033
-
 
 // each of them is 2 byte though
 #define IMX415_TCLKPOST 0x4018
 #define IMX415_TCLKPREPARE 0x401A
 #define IMX415_TCLKTRAIL 0x401C
-#define IMX415_TCLKZERO 0x401E
+#define IMX415_TCLKZERO_L 0x401E
+#define IMX415_TCLKZERO_H 0x401F
 #define IMX415_THSPREPARE 0x4020
 #define IMX415_THSZERO 0x4022
 #define IMX415_THSTRAIL 0x4024
@@ -56,6 +55,7 @@ struct regval {
 // regarding "INCK"
 #define IMX415_BCWAIT_TIME 0x3009
 #define IMX415_CPWAIT_TIME 0x300B
+#define IMX415_SYS_MODE 0x3033 // weird is there something wrong in the spec sheet ?
 #define IMX415_INCKSEL1 0x3115
 #define IMX415_INCKSEL2 0x3116
 #define IMX415_INCKSEL3_L 0x3118
@@ -530,35 +530,36 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 #define IMX415_FULL_SENSOR_RES_WIDTH 3864
 #define IMX415_FULL_SENSOR_RES_HEIGHT 2192
 
+
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_cropping[] = {
         {IMX415_VMAX_L, 0xCA}, //maybe same
         {IMX415_VMAX_M, 0x08}, //maybe same
-        {IMX415_HMAX_L, IMX415_FETCH_16BIT_L(0x44C)},
+        {IMX415_HMAX_L,IMX415_FETCH_16BIT_L(0x44C)},
         {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x44C)},
         {0x302C, 0x00}, //cannot find
         {0x302D, 0x00}, //cannot find
         {IMX415_SYS_MODE, 0x05},
         {IMX415_SHR0_L, 0x08},
         {IMX415_SHR0_M, 0x00},
-        {0x3054, 0x19}, //cannot find
-        {0x3058, 0x3E}, //maybe same
-        {0x3060, 0x25}, //cannot find
-        {0x3064, 0x4a}, //maybe same
+        {0x3054, 0x19}, //cannot find in spec, but is IMX415_SF1_EXPO_REG_L in rockchip
+        {0x3058, 0x3E}, //cannot find in spec, but is IMX415_SF2_EXPO_REG_L in rockchip
+        {0x3060, 0x25}, //cannot find in spec, but is IMX415_RHS1_REG_L     in rockchip
+        {0x3064, 0x4a}, //maybe same          ,but is IMX415_RHS2_REG_L     in rockchip
         {0x30CF, 0x00}, //cannot find
         {IMX415_INCKSEL3_L, 0xC0},
-        {0x3260, 0x01}, //cannot find
+        {0x3260, 0x01}, //cannot find, but is mentioned in the rockchip comments (set to 0x01 in normal mode, something else in hdr)
         {IMX415_INCKSEL6, 0x00},
 
-        {IMX415_TCLKPOST, 0x7F},
-        {IMX415_TCLKPREPARE, 0x37},
-        {IMX415_TCLKTRAIL, 0x37},
-        {IMX415_TCLKZERO, 0xF7},
-        {(IMX415_TCLKZERO+0x01), 0x00}, //why the heck is this the only one of all where the higher bits need to be set to 0 argh
-        {IMX415_THSPREPARE, 0x3F},
-        {IMX415_THSZERO, 0x6F},
-        {IMX415_THSTRAIL, 0x3F},
-        {IMX415_THSEXIT, 0x5F},
-        {IMX415_TLPX, 0x2F},
+        {IMX415_TCLKPOST, 0x7F},   //here applies the 0x00xx workaround
+        {IMX415_TCLKPREPARE, 0x37},//here applies the 0x00xx workaround
+        {IMX415_TCLKTRAIL, 0x37},  //here applies the 0x00xx workaround
+        {IMX415_TCLKZERO_L, 0xF7}, //why the heck is this the only one of all where the higher bits need to be set to 0 argh
+        {IMX415_TCLKZERO_H, 0x00}, // -- " --
+        {IMX415_THSPREPARE, 0x3F}, //here applies the 0x00xx workaround
+        {IMX415_THSZERO, 0x6F},    //here applies the 0x00xx workaround
+        {IMX415_THSTRAIL, 0x3F},   //here applies the 0x00xx workaround
+        {IMX415_THSEXIT, 0x5F},    //here applies the 0x00xx workaround
+        {IMX415_TLPX, 0x2F},       //here applies the 0x00xx workaround
         {IMX415_INCKSEL7, 0x01},
         // added for testing Consti10:
         {IMX415_WINMODE,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
