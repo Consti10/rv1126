@@ -540,12 +540,15 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 #define IMX415_FETCH_16BIT_H(VAL)	(((VAL) >> 8) & 0x07)
 #define IMX415_FETCH_16BIT_L(VAL)	((VAL) & 0xFF)
 
-#define IMX415_FULL_SENSOR_RES_WIDTH 3864
-#define IMX415_FULL_SENSOR_RES_HEIGHT 2192
+#define IMX415_EFFECTIVE_PIXEL_W 3864
+#define IMX415_EFFECTIVE_PIXEL_H 2192
+#define IMX415_RECOMMENDED_RECORDING_W 3840
+#define IMX415_RECOMMENDED_RECORDING_H 2160
 
 //3864-1920 = 1944 | 1944/2 = 972
 //2192-1080 = 1112 | 1112/2 = 556
 
+// 4k sensor cropped down to 1080p
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_cropping[] = {
         {IMX415_VMAX_L, 0xCA}, //maybe same
         {IMX415_VMAX_M, 0x08}, //maybe same

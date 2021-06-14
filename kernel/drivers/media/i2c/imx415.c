@@ -298,10 +298,10 @@ static const struct imx415_mode supported_modes[] = {
     },*/
     {
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
-            //.width = 3864,
-            //.height = 2192,
-            .width = 1920,
-            .height = 1080,
+            .width = 3864,
+            .height = 2192,
+            //.width = 1920,
+            //.height = 1080,
             .max_fps = {
                     .numerator = 10000,
                     // per spec sheet, we should actually be able to do 38.5 fps
@@ -312,7 +312,7 @@ static const struct imx415_mode supported_modes[] = {
             .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800 | seems to be just HMAX from spec sheet
             .vts_def = 0x08ca ,                     // 2250        | seems to be VMAX from spec sheet
             .global_reg_list = imx415_global_10bit_3864x2192_regs,
-            .reg_list = imx415_linear_10bit_3864x2192_891M_regs_cropping,
+            .reg_list = imx415_linear_10bit_3864x2192_891M_regs,
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
