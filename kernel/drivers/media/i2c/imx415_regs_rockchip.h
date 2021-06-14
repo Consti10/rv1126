@@ -489,6 +489,7 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
         {REG_NULL, 0x00},
 };
 
+// 4K sensor res "binned down" to 1080p (2x2binning)
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_regs_binning[] = {
         {0x3024, 0xCA},
         {0x3025, 0x08},

@@ -278,13 +278,13 @@ static const struct imx415_mode supported_modes[] = {
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
 	 */
 	// maybe this just works - yeah
-    /*{
+    {
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
             .width = 1920,
             .height = 1080,
             .max_fps = {
                     .numerator = 10000,
-                    .denominator = 600000,
+                    .denominator = 300000,
             },
             .exp_def = 0x08ca - 0x08, //2250-8=2248
             .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
@@ -295,8 +295,8 @@ static const struct imx415_mode supported_modes[] = {
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
-    },*/
-    {
+    },
+    /*{
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
             .width = 3864,
             .height = 2192,
@@ -316,7 +316,7 @@ static const struct imx415_mode supported_modes[] = {
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
-    },
+    },*/
 	/*{
 		.bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
         .width = 3864,
