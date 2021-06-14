@@ -264,6 +264,9 @@ static const struct imx415_mode supported_modes[] = {
         // 2250 - 2192 = 58
         //             = 46
         // 2238 - 2160 = 78
+        // 2250 - 2238 = 12
+        // 2250 - 2192 = 58
+        // 2160 + 70 = 2230
 
         // hmm some math:
         // u32 vts_def; //The default VTS is the effective image height + VBLANK
@@ -295,8 +298,10 @@ static const struct imx415_mode supported_modes[] = {
     },*/
     {
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
-            .width = 3864,
-            .height = 2192,
+            //.width = 3864,
+            //.height = 2192,
+            .width = 1920,
+            .height = 1080,
             .max_fps = {
                     .numerator = 10000,
                     // per spec sheet, we should actually be able to do 38.5 fps
@@ -304,10 +309,10 @@ static const struct imx415_mode supported_modes[] = {
                     //.denominator = 385000, looks as if i do so, setting fps to 38 from application results in 30fps now ?!
             },
             .exp_def = 0x08ca - 0x08, //2250-8=2248
-            .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800
-            .vts_def = 0x08ca,                     // 2250
+            .hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800 | seems to be just HMAX from spec sheet
+            .vts_def = 0x08ca ,                     // 2250        | seems to be VMAX from spec sheet
             .global_reg_list = imx415_global_10bit_3864x2192_regs,
-            .reg_list = imx415_linear_10bit_3864x2192_891M_regs,
+            .reg_list = imx415_linear_10bit_3864x2192_891M_regs_cropping,
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
@@ -1526,10 +1531,10 @@ static int imx415_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 #define CROP_START(SRC, DST) (((SRC) - (DST)) / 2 / 4 * 4)
-#define DST_WIDTH 3840
-#define DST_HEIGHT 2160
-//#define DST_WIDTH 1920
-//#define DST_HEIGHT 1080
+//#define DST_WIDTH 3840
+//#define DST_HEIGHT 2160
+#define DST_WIDTH 1920
+#define DST_HEIGHT 1080
 
 /*
  * The resolution of the driver configuration needs to be exactly
@@ -1552,6 +1557,7 @@ static int imx415_get_selection(struct v4l2_subdev *sd,
 		sel->r.width = DST_WIDTH;
 		sel->r.top = CROP_START(imx415->cur_mode->height, DST_HEIGHT);
 		sel->r.height = DST_HEIGHT;
+        dev_dbg(&imx415->client->dev, "Consti10: %s left:%d width:%d top:%d height:%d\n",__FUNCTION__,(int)sel->r.left,(int)sel->r.width,(int)sel->r.top,(int)sel->r.height);
 		return 0;
 	}
 	return -EINVAL;

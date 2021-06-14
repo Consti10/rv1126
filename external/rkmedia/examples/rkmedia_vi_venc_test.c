@@ -39,7 +39,7 @@ static int sockfd;
 static struct sockaddr_in address={};
 static const int UDP_PACKET_MAX_SIZE=65507;
 static const int M_PORT=5600;
-static const char* M_IP="192.168.0.13";
+static char* M_IP="192.168.0.11";
 
 static uint64_t getTimeMs(){
     struct timeval time;
@@ -109,6 +109,7 @@ static const struct option long_options[] = {
         {"encode", required_argument, NULL, 'e'},
         {"framerate", required_argument, NULL, 'f'},
         {"device_name", required_argument, NULL, 'd'},
+        {"ip_address",required_argument,NULL, 'i'},
         {NULL, 0, NULL, 0},
 };
 
@@ -182,6 +183,9 @@ int main(int argc, char *argv[]) {
                 //printf("framerate %d\n",atoi(optarg));
                 m_framerate=atoi(optarg);
                 break;
+            case 'i':
+                M_IP=optarg;
+                break;
             case '?':
             default:
                 print_usage(argv[0]);
@@ -195,6 +199,7 @@ int main(int argc, char *argv[]) {
     printf("#width: %d\n", u32Width);
     printf("#framerate: %d\n", m_framerate);
     printf("#encode_type: %d\n", encode_type);
+    printf("#ip_address: %s\n",M_IP);
 
     if (iq_file_dir) {
 #ifdef RKAIQ
