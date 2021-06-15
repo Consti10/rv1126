@@ -278,7 +278,7 @@ static const struct imx415_mode supported_modes[] = {
 	 * VMAX >= (PIX_VWIDTH / 2) + 46 = height + 46
 	 */
 	// maybe this just works - yeah
-    {
+    /*{
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
             .width = 1920,
             .height = 1080,
@@ -295,7 +295,7 @@ static const struct imx415_mode supported_modes[] = {
             .hdr_mode = NO_HDR,
             .mipi_freq_idx = 0,
             .bpp = 10,
-    },
+    },*/
     /*{
             .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
             .width = 3864,
@@ -317,6 +317,26 @@ static const struct imx415_mode supported_modes[] = {
             .mipi_freq_idx = 0,
             .bpp = 10,
     },*/
+    {
+            .bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
+            .width = 3864,
+            .height = 2192,
+            //.width = 1920,
+            //.height = 1080,
+            .max_fps = {
+                    .numerator = 10000,
+                    .denominator = 600000,
+            },
+            .exp_def = 0x08ca - 0x08, //2250-8=2248
+            //.hts_def = 0x044c * IMX415_4LANES * 2, //1100*4*2=8800 | seems to be just HMAX from spec sheet
+            .hts_def = 0x226 * IMX415_4LANES * 2,
+            .vts_def = 0x08ca ,                     // 2250        | seems to be VMAX from spec sheet
+            .global_reg_list = imx415_global_10bit_3864x2192_regs,
+            .reg_list = imx415_linear_10bit_3864x2192_1782_regs,
+            .hdr_mode = NO_HDR,
+            .mipi_freq_idx = 2,
+            .bpp = 10,
+    },
 	/*{
 		.bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
         .width = 3864,

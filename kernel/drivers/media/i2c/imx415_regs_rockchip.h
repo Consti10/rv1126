@@ -604,7 +604,56 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
         {REG_NULL, 0x00},
 };
 
+//             | For 891Mbps & 37.125 | For 1485 & 37.125          | For 1782 & 37.125
+//BCWAIT_TIME  | 07Fh                 | 07Fh                       | 07Fh
+//CPWAIT_TIME  | 05Bh                 | 05Bh                       | 05Bh
+//SYS_MODE     | 5h                   | 8h               SYS_MODE  | 4h
+//INCKSEL1     | 00h                  | 00h                        | 00h
+//INCKSEL2     | 24h                  | 24h                        | 24h
+//INCKSEL3     | 0C0h                 | 0A0              INCKSEL3  | 0C0h
+//INCKSEL4     | 0E0h                 | 0E0h                       | 0E0h
+//INCKSEL5     | 24h                  | 24h                        | 24h
+//TXCLKESC_FREQ| 0948h                | 0948h                      | 0948h
+//INCKSEL6     | 0h                   | 1h               INCKSEL6  | 1h
+//INCKSEL7     | 1h                   | 0h               INCKSEL7  | 0h
 
+// 4k but in 1782Mhz mode (max 60 fps)
+static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_1782_regs[] = {
+        {IMX415_VMAX_L, 0xCA}, //maybe same
+        {IMX415_VMAX_M, 0x08}, //maybe same
+        {IMX415_HMAX_L,IMX415_FETCH_16BIT_L(0x226)},
+        {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x226)},
+        {0x302C, 0x00}, //cannot find
+        {0x302D, 0x00}, //cannot find
+        {IMX415_SYS_MODE, 0x04},
+        {IMX415_SHR0_L, 0x08},
+        {IMX415_SHR0_M, 0x00},
+        {0x3054, 0x19}, //cannot find in spec, but is IMX415_SF1_EXPO_REG_L in rockchip
+        {0x3058, 0x3E}, //cannot find in spec, but is IMX415_SF2_EXPO_REG_L in rockchip
+        {0x3060, 0x25}, //cannot find in spec, but is IMX415_RHS1_REG_L     in rockchip
+        {0x3064, 0x4a}, //maybe same          ,but is IMX415_RHS2_REG_L     in rockchip
+        {0x30CF, 0x00}, //cannot find
+        {IMX415_INCKSEL3_L, 0xC0},
+        {0x3260, 0x01}, //cannot find, but is mentioned in the rockchip comments (set to 0x01 in normal mode, something else in hdr)
+        {IMX415_INCKSEL6, 0x01}, //changed
+
+        {IMX415_TCLKPOST, 0xB7},   //here applies the 0x00xx workaround
+        {IMX415_TCLKPREPARE, 0x67},//here applies the 0x00xx workaround
+        {IMX415_TCLKTRAIL, 0x6F},  //here applies the 0x00xx workaround
+        {IMX415_TCLKZERO_L, 0xDF}, //why the heck is this the only one of all where the higher bits need to be set to 0 argh
+        {IMX415_TCLKZERO_H, 0x01}, // -- " --
+        {IMX415_THSPREPARE, 0x6F}, //here applies the 0x00xx workaround
+        {IMX415_THSZERO, 0xCF},    //here applies the 0x00xx workaround
+        {IMX415_THSTRAIL, 0x6F},   //here applies the 0x00xx workaround
+        {IMX415_THSEXIT, 0xB7},    //here applies the 0x00xx workaround
+        {IMX415_TLPX, 0x5F},       //here applies the 0x00xx workaround
+        {IMX415_INCKSEL7, 0x00}, //changed
+        // added for testing Consti10:
+
+        // added for testing Consti10 end
+
+        {REG_NULL, 0x00},
+};
 
 // PIX_VWIDTH
 //V TTL (1farame line length or VMAX) ≥ (PIX_VWIDTH / 2) + 46
