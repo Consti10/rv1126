@@ -617,7 +617,7 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_891M_reg
 //INCKSEL6     | 0h                   | 1h               INCKSEL6  | 1h
 //INCKSEL7     | 1h                   | 0h               INCKSEL7  | 0h
 
-// 4k but in 1782Mhz mode (max 60 fps)
+// 4k but in 1782Mhz mode (max 60 fps) - YEAH, works
 static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_1782_regs[] = {
         {IMX415_VMAX_L, 0xCA}, //maybe same
         {IMX415_VMAX_M, 0x08}, //maybe same
@@ -650,6 +650,53 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_1782_reg
         {IMX415_INCKSEL7, 0x00}, //changed
         // added for testing Consti10:
 
+        // added for testing Consti10 end
+
+        {REG_NULL, 0x00},
+};
+
+static __maybe_unused const struct regval imx415_linear_10bit_binning2x2_1782_regs[] = {
+        {IMX415_VMAX_L, 0xCA}, //maybe same
+        {IMX415_VMAX_M, 0x08}, //maybe same
+        {IMX415_HMAX_L,IMX415_FETCH_16BIT_L(0x16D)},
+        {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x16D)},
+        {0x302C, 0x00}, //cannot find
+        {0x302D, 0x00}, //cannot find
+        {IMX415_SYS_MODE, 0x04},
+        {IMX415_SHR0_L, 0x08},
+        {IMX415_SHR0_M, 0x00},
+        {0x3054, 0x19}, //cannot find in spec, but is IMX415_SF1_EXPO_REG_L in rockchip
+        {0x3058, 0x3E}, //cannot find in spec, but is IMX415_SF2_EXPO_REG_L in rockchip
+        {0x3060, 0x25}, //cannot find in spec, but is IMX415_RHS1_REG_L     in rockchip
+        {0x3064, 0x4a}, //maybe same          ,but is IMX415_RHS2_REG_L     in rockchip
+        {0x30CF, 0x00}, //cannot find
+        {IMX415_INCKSEL3_L, 0xC0},
+        {0x3260, 0x01}, //cannot find, but is mentioned in the rockchip comments (set to 0x01 in normal mode, something else in hdr)
+        {IMX415_INCKSEL6, 0x01}, //changed
+
+        {IMX415_TCLKPOST, 0xB7},   //here applies the 0x00xx workaround
+        {IMX415_TCLKPREPARE, 0x67},//here applies the 0x00xx workaround
+        {IMX415_TCLKTRAIL, 0x6F},  //here applies the 0x00xx workaround
+        {IMX415_TCLKZERO_L, 0xDF}, //why the heck is this the only one of all where the higher bits need to be set to 0 argh
+        {IMX415_TCLKZERO_H, 0x01}, // -- " --
+        {IMX415_THSPREPARE, 0x6F}, //here applies the 0x00xx workaround
+        {IMX415_THSZERO, 0xCF},    //here applies the 0x00xx workaround
+        {IMX415_THSTRAIL, 0x6F},   //here applies the 0x00xx workaround
+        {IMX415_THSEXIT, 0xB7},    //here applies the 0x00xx workaround
+        {IMX415_TLPX, 0x5F},       //here applies the 0x00xx workaround
+        {IMX415_INCKSEL7, 0x00}, //changed
+        // added for testing Consti10:
+        {0x301C,0x00}, //WINMODE //0: All-pixel mode, Horizontal/Vertical 2/2-line binning 4: Window cropping mode
+        {0x3020,0x01}, //HADD //0h: All-pixel mode 1h: Horizontal 2 binning
+        {0x3021,0x01}, //VADD //0h: All-pixel mode 1h: Vertical 2 binning
+        {0x3022,0x01}, //ADDMODE //0h: All-pixel mode 1h: Horizontal/Vertical 2/2-line binning
+        //
+        // to resolve:
+        {0x3031,0x00}, //ADBIT //set by global to 0 , 0=10bit 1=12bit
+        {0x3032,0x00}, //MDBIT //set by global to 0
+        //
+        {0x30D9,0x02}, //DIG_CLP_VSTAET ? 0x02=binning 0x06=All-pixel scan mode , default 0x06
+        {0x30DA,0x01}, //DIG_CLP_VNUM ? 0x01=binning 0x02=all-pixel scan mode, default 0x02
         // added for testing Consti10 end
 
         {REG_NULL, 0x00},
