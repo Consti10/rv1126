@@ -658,8 +658,8 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_1782_reg
 static __maybe_unused const struct regval imx415_linear_10bit_binning2x2_1782_regs[] = {
         {IMX415_VMAX_L, 0xCA}, //maybe same
         {IMX415_VMAX_M, 0x08}, //maybe same
-        {IMX415_HMAX_L,IMX415_FETCH_16BIT_L(0x16D)},
-        {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x16D)},
+        {IMX415_HMAX_L,IMX415_FETCH_16BIT_L(0x226)},//0x16D
+        {IMX415_HMAX_H,IMX415_FETCH_16BIT_H(0x226)},
         {0x302C, 0x00}, //cannot find
         {0x302D, 0x00}, //cannot find
         {IMX415_SYS_MODE, 0x04},
