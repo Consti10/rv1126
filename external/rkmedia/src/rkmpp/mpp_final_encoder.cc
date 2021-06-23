@@ -197,11 +197,11 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
     img_info = cfg.img_cfg.image_info;
 
     // Encoder param check.
-    ENCODER_CFG_CHECK(vid_cfg.frame_rate, 1, 60, ENCODER_CFG_INVALID, "fpsNum");
-    ENCODER_CFG_CHECK(vid_cfg.frame_rate_den, 1, 16, 1, "fpsDen");
-    ENCODER_CFG_CHECK(vid_cfg.frame_in_rate, 1, 60, ENCODER_CFG_INVALID,
+    ENCODER_CFG_CHECK(vid_cfg.frame_rate, 1, 120, ENCODER_CFG_INVALID, "fpsNum");
+    ENCODER_CFG_CHECK(vid_cfg.frame_rate_den, 1, 8, 1, "fpsDen");
+    ENCODER_CFG_CHECK(vid_cfg.frame_in_rate, 1, 120, ENCODER_CFG_INVALID,
                       "fpsInNum");
-    ENCODER_CFG_CHECK(vid_cfg.frame_in_rate_den, 1, 16, 1, "fpsInDen");
+    ENCODER_CFG_CHECK(vid_cfg.frame_in_rate_den, 1, 8, 1, "fpsInDen");
 
     if (!vid_cfg.rc_mode) {
       LOG("MPP Encoder[JPEG]: rcMode use defalut value: vbr\n");
