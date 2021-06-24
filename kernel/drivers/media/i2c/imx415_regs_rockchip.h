@@ -655,6 +655,7 @@ static __maybe_unused const struct regval imx415_linear_10bit_3864x2192_1782_reg
         {REG_NULL, 0x00},
 };
 
+// hmm still doesn't work properly, even with the modified imx307 file.
 static __maybe_unused const struct regval imx415_linear_10bit_binning2x2_1782_regs[] = {
         {IMX415_VMAX_L, 0xCA}, //maybe same
         {IMX415_VMAX_M, 0x08}, //maybe same
@@ -701,6 +702,11 @@ static __maybe_unused const struct regval imx415_linear_10bit_binning2x2_1782_re
 
         {REG_NULL, 0x00},
 };
+
+// the "image" schematics
+//    res     | Horizontal   | Vertical
+// 3840x2160  | 12+12=24     | 1+12+8+8+2+1= 32
+// 1920x1080  | 6+6+12=24    | 1+6+4+4+1+1=  17
 
 // PIX_VWIDTH
 //V TTL (1farame line length or VMAX) ≥ (PIX_VWIDTH / 2) + 46
