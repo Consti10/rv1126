@@ -49,7 +49,7 @@ static int ParseMediaConfigFps(std::map<std::string, std::string> &params,
   }
   num = strtok((char *)value.c_str(), "/");
   den = strtok(NULL, "/");
-  if (!num || !den || (strlen(num) > 3) || (strlen(den) > 3)) {
+  if (!num || !den || (strlen(num) > 2) || (strlen(den) > 2)) {
     LOG("ERROR: MediaCfg: fps: KEY_FPS=%s is invalid!\n", value.c_str());
     return -1;
   }
@@ -63,7 +63,7 @@ static int ParseMediaConfigFps(std::map<std::string, std::string> &params,
   }
   num = strtok((char *)value.c_str(), "/");
   den = strtok(NULL, "/");
-  if (!num || !den || (strlen(num) > 3) || (strlen(den) > 3)) {
+  if (!num || !den || (strlen(num) > 2) || (strlen(den) > 2)) {
     LOG("ERROR: MediaCfg: fps: KEY_FPS_IN(%s) is null!\n", value.c_str());
     return -1;
   }
