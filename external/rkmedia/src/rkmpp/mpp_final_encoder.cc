@@ -573,10 +573,10 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
 
   // Encoder param check.
   ENCODER_CFG_CHECK(vconfig.frame_rate, 1, 120, ENCODER_CFG_INVALID, "fpsNum");
-  ENCODER_CFG_CHECK(vconfig.frame_rate_den, 1, 8, 1, "fpsDen");
+  ENCODER_CFG_CHECK(vconfig.frame_rate_den, 1, 16, 1, "fpsDen");
   ENCODER_CFG_CHECK(vconfig.frame_in_rate, 1, 120, ENCODER_CFG_INVALID,
                     "fpsInNum");
-  ENCODER_CFG_CHECK(vconfig.frame_in_rate_den, 1, 8, 1, "fpsInDen");
+  ENCODER_CFG_CHECK(vconfig.frame_in_rate_den, 1, 16, 1, "fpsInDen");
   ENCODER_CFG_CHECK(vconfig.gop_size, 1, 3000,
                     (vconfig.frame_rate > 10) ? vconfig.frame_rate : 30,
                     "gopSize");
