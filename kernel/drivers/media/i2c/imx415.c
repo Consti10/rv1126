@@ -346,7 +346,7 @@ static const struct imx415_mode supported_modes[] = {
             .height = 1080+(1+6+4+4+1+1),
             .max_fps = {
                     .numerator = 10000,
-                    .denominator = 600000,
+                    .denominator = 120000,
             },
             .exp_def = 0x08ca - 0x08, //2250-8=2248
             .hts_def = 0x226 * IMX415_4LANES * 2,
