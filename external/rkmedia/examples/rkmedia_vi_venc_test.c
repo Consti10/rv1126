@@ -215,11 +215,11 @@ int main(int argc, char *argv[]) {
 
     RK_MPI_SYS_Init();
     VI_CHN_ATTR_S vi_chn_attr;
-    vi_chn_attr.pcVideoNode = "rkispp_scale0";
+    vi_chn_attr.pcVideoNode = "rkispp_m_bypass";
     vi_chn_attr.u32BufCnt = 4; // should be >= 4
     vi_chn_attr.u32Width = u32Width;
     vi_chn_attr.u32Height = u32Height;
-    vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
+    vi_chn_attr.enPixFmt = IMAGE_TYPE_FBC0;
     vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
     ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
     ret |= RK_MPI_VI_EnableChn(0, 0);
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
             venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
             break;
     }
-    venc_chn_attr.stVencAttr.imageType = IMAGE_TYPE_NV12;
+    venc_chn_attr.stVencAttr.imageType = IMAGE_TYPE_FBC0;
     venc_chn_attr.stVencAttr.u32PicWidth = u32Width;
     venc_chn_attr.stVencAttr.u32PicHeight = u32Height;
     venc_chn_attr.stVencAttr.u32VirWidth = u32Width;
